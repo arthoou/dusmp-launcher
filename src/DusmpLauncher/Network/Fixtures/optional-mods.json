@@ -1,0 +1,61 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. One entry per optionalId used by modpack-manifest.json; sizeBytes is the real summed size of that id's manifest files, so the optional-mods screen shows honest numbers. icon urls are the mods' real Modrinth icons.",
+  "items": [
+    {
+      "id": "jei",
+      "name": "Just Enough Items",
+      "description": {
+        "en": "Recipe and item browser. Shows how to craft anything, and what anything is used for, from an in-game search panel.",
+        "pt-BR": "Navegador de receitas e itens. Mostra como criar qualquer coisa e para que cada item serve, num painel de busca dentro do jogo."
+      },
+      "category": "utility",
+      "impact": "gameplay",
+      "icon": "https://cdn.modrinth.com/data/u6dRKJwZ/4a3f18ac0d096c9f8e9176984c44be4e58f94c89_96.webp",
+      "sizeBytes": 2257356,
+      "defaultEnabled": true,
+      "addedInVersion": "1.0.0"
+    },
+    {
+      "id": "simple-voice-chat",
+      "name": "Simple Voice Chat",
+      "description": {
+        "en": "Proximity voice chat with the players around you. Needs a working microphone and adds the largest download of the optional set.",
+        "pt-BR": "Chat de voz por proximidade com os jogadores perto de você. Precisa de microfone e é o maior download entre os opcionais."
+      },
+      "category": "social",
+      "impact": "heavy",
+      "icon": "https://cdn.modrinth.com/data/9eGKb6K1/icon.png",
+      "sizeBytes": 4934688,
+      "defaultEnabled": true,
+      "addedInVersion": "1.2.0"
+    },
+    {
+      "id": "sodium-extra",
+      "name": "Sodium Extra",
+      "description": {
+        "en": "Extra video options on top of Sodium: fog control, particle limits, animation toggles and a configurable FPS counter.",
+        "pt-BR": "Opções de vídeo extras em cima do Sodium: controle de neblina, limite de partículas, animações e contador de FPS configurável."
+      },
+      "category": "performance",
+      "impact": "visual",
+      "icon": "https://cdn.modrinth.com/data/PtjYWJkn/0df4fb22a11e1dcb5e83cb0aadd275b571aca7a9_96.webp",
+      "sizeBytes": 472060,
+      "defaultEnabled": true,
+      "addedInVersion": "1.0.0"
+    },
+    {
+      "id": "entityculling",
+      "name": "Entity Culling",
+      "description": {
+        "en": "Skips rendering mobs and block entities hidden behind walls. Helps most in crowded farms and big bases.",
+        "pt-BR": "Deixa de renderizar mobs e blocos escondidos atrás de paredes. Ajuda mais em farms cheias e bases grandes."
+      },
+      "category": "performance",
+      "impact": "performance",
+      "icon": "https://cdn.modrinth.com/data/NNAgCjsB/7873452d6cede4daed12da3d7d8c193ab88b4fd6_96.webp",
+      "sizeBytes": 1510018,
+      "defaultEnabled": true,
+      "addedInVersion": "1.4.0"
+    }
+  ]
+}

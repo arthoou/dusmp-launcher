@@ -1,0 +1,30 @@
+/* The launcher's one piece of motion, specified by hand and kept byte-for-byte.
+   Only the ink colour is parameterised: the original #000 is invisible on the
+   near-black launcher background, so it resolves through --loader-ink. Do not
+   restyle the sizes, the keyframe name or the timing — they were chosen, not
+   generated, and every other animation in the app defers to this one. */
+
+:root {
+  --loader-ink: #ffb829;
+}
+
+/* HTML: <div class="loader"></div> */
+.loader {
+  height: 9px;
+  width: 60px;
+  --c:no-repeat linear-gradient(var(--loader-ink) 0 0);
+  background: var(--c), var(--c), var(--c), var(--c);
+  background-size: 26% 3px;
+  animation: l6 1s infinite;
+}
+@keyframes l6 {
+  0%,
+  70%,
+  100%  {background-position: calc(0*100%/3) 50%,calc(1*100%/3) 50% ,calc(2*100%/3) 50%,calc(3*100%/3) 50% }
+  23.33%{background-position: calc(0*100%/3) 0  ,calc(1*100%/3) 100%,calc(2*100%/3) 0  ,calc(3*100%/3) 100%}
+  46.67%{background-position: calc(1*100%/3) 0  ,calc(0*100%/3) 100%,calc(3*100%/3) 0  ,calc(2*100%/3) 100%}
+  69.99%{background-position: calc(1*100%/3) 50%,calc(0*100%/3) 50% ,calc(3*100%/3) 50%,calc(2*100%/3) 50% }
+}
+
+/* The loader is decorative: a reader that cannot see it is told "busy" by the
+   live region next to it, so it is hidden from the accessibility tree in HTML. */

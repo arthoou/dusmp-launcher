@@ -1,0 +1,9 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. maintenance is false so the happy path is the default; set maintenance true to see the banner, and blockPlay true to see Play refused. message is carried per language because the API owns this wording, not the translation tables.",
+  "maintenance": false,
+  "blockPlay": false,
+  "message": {
+    "en": "All services are running normally.",
+    "pt-BR": "Todos os serviços estão funcionando normalmente."
+  }
+}

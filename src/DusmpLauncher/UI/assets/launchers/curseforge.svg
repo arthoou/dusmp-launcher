@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="CurseForge">
+  <!-- Original DUSMP monogram. CurseForge's own logo is not redistributable, so this
+       identifies the launcher without reproducing its mark. -->
+  <defs>
+    <linearGradient id="curseforge-f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F1743A"/>
+      <stop offset="1" stop-color="#C53C0D"/>
+    </linearGradient>
+    <linearGradient id="curseforge-s" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".30"/>
+      <stop offset=".55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#curseforge-f)"/>
+  <rect width="48" height="48" rx="12" fill="url(#curseforge-s)"/>
+  <rect x=".6" y=".6" width="46.8" height="46.8" rx="11.4" fill="none" stroke="#000" stroke-opacity=".28"/>
+  <text x="24" y="24" fill="#170802" fill-opacity=".92" text-anchor="middle" dominant-baseline="central"
+        font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-weight="800"
+        font-size="23" letter-spacing="0">C</text>
+</svg>

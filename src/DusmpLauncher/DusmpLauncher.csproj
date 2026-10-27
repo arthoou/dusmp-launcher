@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>DusmpLauncher</AssemblyName>
+    <RootNamespace>DusmpLauncher</RootNamespace>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Photino needs a real window; never show a console on Windows. -->
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.NET" Version="4.0.16" />
+    <PackageReference Include="CmlLib.Core" Version="4.0.6" />
+    <PackageReference Include="CmlLib.Core.Auth.Microsoft" Version="3.3.1" />
+    <PackageReference Include="CmlLib.Core.Installer.NeoForge" Version="4.0.1" />
+    <PackageReference Include="CmlLib.Core.Installer.Forge" Version="1.1.1" />
+  </ItemGroup>
+
+  <!-- UI, translations and dev fixtures ship as embedded resources so the
+       single binary serves them over the app:// scheme with no loose files. -->
+  <ItemGroup>
+    <!-- The checks exercise pure helpers that are not part of the app's surface. -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>DownloadIntegrity</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="UI/**/*" WithCulture="false" />
+    <EmbeddedResource Include="Localization/Languages/*.json" WithCulture="false" />
+    <EmbeddedResource Include="Network/Fixtures/*.json" />
+  </ItemGroup>
+
+</Project>

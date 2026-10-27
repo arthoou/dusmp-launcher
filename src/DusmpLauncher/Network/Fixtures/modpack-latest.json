@@ -1,0 +1,7 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. version must stay equal to modpack-manifest.json's version, otherwise the launcher thinks an update exists and then installs a manifest that reports a different version. manifestUrl is null because the fixture client serves the manifest from its own embedded resource.",
+  "version": "1.4.0",
+  "manifestUrl": null,
+  "releasedAt": "2026-09-20T18:00:00+00:00",
+  "changelogUrl": "https://dusmp.online/modpack/changelog"
+}

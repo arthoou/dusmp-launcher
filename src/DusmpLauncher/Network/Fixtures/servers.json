@@ -1,0 +1,26 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. These hostnames do not resolve yet, which is on purpose: the server list must render, and the status pings must report offline, without the launcher treating it as a startup failure. regionId must match an id in regions.json.",
+  "items": [
+    {
+      "id": "survival",
+      "name": "DUSMP Survival",
+      "host": "play.dusmp.online",
+      "port": 25565,
+      "regionId": "sa-east"
+    },
+    {
+      "id": "creative",
+      "name": "DUSMP Creative",
+      "host": "creative.dusmp.online",
+      "port": 25565,
+      "regionId": "sa-east"
+    },
+    {
+      "id": "events",
+      "name": "DUSMP Events",
+      "host": "events.dusmp.online",
+      "port": 25566,
+      "regionId": "na-east"
+    }
+  ]
+}

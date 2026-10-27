@@ -1,0 +1,350 @@
+/* Skin and cape screen.
+
+   The player model is the one from the Yerium launcher: a CSS 3D box per body
+   part, each face showing the right rectangle of the skin PNG through
+   background-position. No WebGL, no canvas — it is the cheapest way to get a
+   real preview, and it works in this WebView unchanged.
+
+   Everything is scoped under .screen-profile so the generic .front/.back/.top
+   face classes cannot reach any other screen. */
+
+.screen-profile { --skin-scale: 7px; }
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: clamp(14px, 2.5vw, 26px);
+  align-items: start;
+  min-height: 0;
+}
+
+/* ---------- stage ---------- */
+
+.profile-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  /* NameMC's chequerboard, down to its two greys and its 23px squares. It reads
+     as "transparent background" and, being a shade lighter than the panel,
+     keeps a dark skin from disappearing into it. */
+  background:
+    linear-gradient(45deg, #1d2024 25%, transparent 25% 75%, #1d2024 75%),
+    linear-gradient(45deg, #1d2024 25%, transparent 25% 75%, #1d2024 75%),
+    #212529;
+  background-position: 0 0, 23px 23px;
+  background-size: 46px 46px;
+  cursor: grab;
+  user-select: none;
+  overflow: hidden;
+}
+.profile-stage:active { cursor: grabbing; }
+
+.profile-scene {
+  width: 100%;
+  height: clamp(300px, 46vh, 400px);
+  display: grid;
+  place-items: center;
+  /* NameMC frames the model with a 38 degree lens from sixty skin-pixels away.
+     In CSS that same camera is a perspective of sixty times whatever one skin
+     pixel currently measures — so the lens stays put while the wheel zooms. The
+     900px this used to be was more than twice as far back, which flattened the
+     model into something closer to an isometric sprite. */
+  perspective: calc(60 * var(--skin-scale));
+}
+
+.player-model {
+  position: relative;
+  width: 210px;
+  height: 280px;
+  transform-style: preserve-3d;
+  /* The model turns inside a fixed camera, exactly as it does on NameMC. Its
+     box is 32 skin-pixels tall, so the default 50% origin lands on the model's
+     own centre — the point NameMC rotates about. */
+  transform: rotateX(var(--pitch, -21deg)) rotateY(var(--yaw, 30deg));
+}
+
+.screen-profile .part { position: absolute; transform-style: preserve-3d; }
+
+.screen-profile .part {
+  left: calc(50% + (var(--x) * var(--skin-scale)) - (var(--w) * var(--skin-scale) / 2));
+  top: calc(var(--y) * var(--skin-scale));
+  width: calc(var(--w) * var(--skin-scale));
+  height: calc(var(--h) * var(--skin-scale));
+  /* --py is the distance from the top of the piece to its pivot (shoulder or
+     hip) in skin pixels. Base and overlay share the same absolute pivot, so the
+     second layer swings with the limb instead of drifting off it. */
+  transform-origin: 50% calc(var(--py, 0) * var(--skin-scale));
+  transform: translateZ(calc(var(--z, 0) * var(--skin-scale))) rotateX(var(--rx, 0deg));
+}
+
+/* Walking. Each limb carries its own angle rather than sharing one: the arms
+   swing 18 degrees and the legs 20, so one variable could not serve both. */
+.screen-profile .limb-right-arm { --rx: var(--swing-right-arm, 0deg); }
+.screen-profile .limb-left-arm  { --rx: var(--swing-left-arm, 0deg); }
+.screen-profile .limb-right-leg { --rx: var(--swing-right-leg, 0deg); }
+.screen-profile .limb-left-leg  { --rx: var(--swing-left-leg, 0deg); }
+
+.screen-profile .face {
+  position: absolute;
+  display: block;
+  width: calc(var(--fw) * var(--skin-scale));
+  height: calc(var(--fh) * var(--skin-scale));
+  /* Flat, not preserve-3d: a face is a single flat quad, and its texture and
+     its shading veil have to be painted into that quad rather than floating in
+     the box's 3D space as elements of their own. Left in 3D they keep their own
+     backface-visibility, so the three faces pointing away from the camera went
+     on drawing their contents straight over the three facing it — the whole
+     model came out at the one brightness the far side happens to have. */
+  transform-style: flat;
+  backface-visibility: hidden;
+}
+
+/* The texture sits on a child so a mirrored limb can be flipped without
+   touching the face's own transform, which is what decides where the face is
+   and which way it points. Flipping the face itself would turn its back to the
+   camera and backface-visibility would then hide it outright. */
+.screen-profile .face > i {
+  position: absolute;
+  inset: 0;
+  background-image: var(--skin-url);
+  background-repeat: no-repeat;
+  /* The texture is magnified by however much the box was inflated past it, so
+     an overlay's 8x8 rectangle covers its whole 9x9 face instead of sitting in
+     one corner of it. */
+  background-size:
+    calc(var(--tw, 64) * var(--sx, 1) * var(--skin-scale))
+    calc(var(--th, 64) * var(--sy, 1) * var(--skin-scale));
+  background-position:
+    calc(var(--u) * var(--sx, 1) * var(--skin-scale) * -1)
+    calc(var(--v) * var(--sy, 1) * var(--skin-scale) * -1);
+  /* Without this the browser smooths a 64px texture blown up 7x into mush. */
+  image-rendering: pixelated;
+  transform: scale(var(--fx, 1), var(--fy, 1));
+}
+
+/* Minecraft stores every underside upside down. */
+.screen-profile .bottom > i { --fy: -1; }
+/* A legacy 64x32 sheet has no left limbs: they are the right ones mirrored. */
+.screen-profile .mirror > i { --fx: -1; }
+
+/* Shading.
+   NameMC lights the model with an ambient 0.7 and a directional 0.3 from the
+   front, right and slightly above, so a face comes out at 0.7 + 0.3 * max(0,
+   n·L) of its texture colour. Painting black over it at 1 - brightness is the
+   same multiplication, and unlike filter: brightness() it cannot flatten the
+   3D scene. The script publishes one set of six values per moving group. */
+.screen-profile .face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: calc(1 - var(--shade, 1));
+  pointer-events: none;
+}
+
+.screen-profile .part > .front  { --shade: var(--s0-front); }
+.screen-profile .part > .back   { --shade: var(--s0-back); }
+.screen-profile .part > .left   { --shade: var(--s0-left); }
+.screen-profile .part > .right  { --shade: var(--s0-right); }
+.screen-profile .part > .top    { --shade: var(--s0-top); }
+.screen-profile .part > .bottom { --shade: var(--s0-bottom); }
+
+/* Same specificity as the rule above, so these have to come after it: a limb
+   that has swung is no longer facing where the body faces. */
+.screen-profile .shade-s1 > .front  { --shade: var(--s1-front); }
+.screen-profile .shade-s1 > .back   { --shade: var(--s1-back); }
+.screen-profile .shade-s1 > .left   { --shade: var(--s1-left); }
+.screen-profile .shade-s1 > .right  { --shade: var(--s1-right); }
+.screen-profile .shade-s1 > .top    { --shade: var(--s1-top); }
+.screen-profile .shade-s1 > .bottom { --shade: var(--s1-bottom); }
+.screen-profile .shade-s2 > .front  { --shade: var(--s2-front); }
+.screen-profile .shade-s2 > .back   { --shade: var(--s2-back); }
+.screen-profile .shade-s2 > .left   { --shade: var(--s2-left); }
+.screen-profile .shade-s2 > .right  { --shade: var(--s2-right); }
+.screen-profile .shade-s2 > .top    { --shade: var(--s2-top); }
+.screen-profile .shade-s2 > .bottom { --shade: var(--s2-bottom); }
+.screen-profile .shade-s3 > .front  { --shade: var(--s3-front); }
+.screen-profile .shade-s3 > .back   { --shade: var(--s3-back); }
+.screen-profile .shade-s3 > .left   { --shade: var(--s3-left); }
+.screen-profile .shade-s3 > .right  { --shade: var(--s3-right); }
+.screen-profile .shade-s3 > .top    { --shade: var(--s3-top); }
+.screen-profile .shade-s3 > .bottom { --shade: var(--s3-bottom); }
+.screen-profile .shade-s4 > .front  { --shade: var(--s4-front); }
+.screen-profile .shade-s4 > .back   { --shade: var(--s4-back); }
+.screen-profile .shade-s4 > .left   { --shade: var(--s4-left); }
+.screen-profile .shade-s4 > .right  { --shade: var(--s4-right); }
+.screen-profile .shade-s4 > .top    { --shade: var(--s4-top); }
+.screen-profile .shade-s4 > .bottom { --shade: var(--s4-bottom); }
+
+.screen-profile .front  { transform: translateZ(calc(var(--d) * var(--skin-scale) / 2)); }
+.screen-profile .back   { transform: rotateY(180deg) translateZ(calc(var(--d) * var(--skin-scale) / 2)); }
+.screen-profile .right  { transform: translateX(calc((var(--w) - var(--d) / 2) * var(--skin-scale))) rotateY(90deg); }
+.screen-profile .left   { transform: translateX(calc(var(--d) * var(--skin-scale) / -2)) rotateY(-90deg); }
+.screen-profile .top    { transform: translateY(calc(var(--d) * var(--skin-scale) / -2)) rotateX(90deg); }
+.screen-profile .bottom { transform: translateY(calc((var(--h) - var(--d) / 2) * var(--skin-scale))) rotateX(-90deg); }
+
+/* Cape: a 10x16x1 box hung from the top of the back, turned to face outwards.
+   Scoped the same way as .screen-profile .part above, and placed after it: the
+   cape carries both classes, so an unscoped .cape-model rule loses on
+   specificity and the cape ends up with the generic limb transform — a pure
+   translation, with no rotation and no swing at all. */
+.screen-profile .cape-model {
+  transform-origin: 50% 0;
+  transform: translateZ(calc(var(--z, 0) * var(--skin-scale))) rotateX(var(--cape-tilt, -15.7deg)) rotateY(180deg);
+}
+.screen-profile .cape-model > .face > i { background-image: var(--cape-url); }
+.screen-profile .cape-model > .front  { --shade: var(--s5-front); }
+.screen-profile .cape-model > .back   { --shade: var(--s5-back); }
+.screen-profile .cape-model > .left   { --shade: var(--s5-left); }
+.screen-profile .cape-model > .right  { --shade: var(--s5-right); }
+.screen-profile .cape-model > .top    { --shade: var(--s5-top); }
+.screen-profile .cape-model > .bottom { --shade: var(--s5-bottom); }
+
+.profile-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #0b0d12b8;
+  border: 1px solid var(--line);
+  color: #d7dade;
+  cursor: pointer;
+}
+.profile-play:hover { background: #ffffff1f; }
+.profile-play svg { width: 15px; fill: currentColor; }
+.profile-play .icon-play, .profile-play.is-paused .icon-pause { display: none; }
+.profile-play.is-paused .icon-play { display: block; }
+
+/* ---------- controls ---------- */
+
+.profile-side { display: grid; gap: 14px; min-width: 0; align-content: start; }
+.profile-block { background: #ffffff08; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.profile-block-title { margin: 0 0 10px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+
+.model-switch { display: flex; gap: 8px; }
+.model-switch button { flex: 1; border: 1px solid var(--line); background: #ffffff0a; color: #e9e9e9; border-radius: 9px; padding: 9px; cursor: pointer; }
+.model-switch button.is-active { background: var(--gold); border-color: var(--gold); color: #1d1607; font-weight: 650; }
+
+/* The lists flow at their natural height. Giving each one its own scroll put a
+   scrollable area inside a scrollable column, and the outer one then clipped the
+   last row of capes with no way to reach it. One scroll region, on the column. */
+.skin-list, .cape-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+
+.skin-tile, .cape-tile {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  width: 62px;
+  padding: 7px 4px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #ffffff08;
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+.skin-tile.is-active, .cape-tile.is-active { border-color: var(--gold); background: #ffb82914; color: #f3f3f3; }
+.skin-tile:disabled { opacity: .5; cursor: default; }
+
+/* The head is the 8x8 face at (8,8) in the skin, blown up 4x and kept sharp.
+   Height is "auto" on purpose: a legacy 64x32 skin would be stretched to twice
+   its height by a fixed 256x256, and the face would come out wrong. */
+.skin-head {
+  width: 32px; height: 32px;
+  background-image: var(--tile-url);
+  background-size: 256px auto;
+  background-position: -32px -32px;
+  image-rendering: pixelated;
+  border-radius: 4px;
+}
+
+/* A cape texture is 64x32 with the outer face a 10x16 rectangle at (1,1).
+   Scaled 2.6x that face is 26x41.6, which is the tile — so the whole texture is
+   166.4x83.2 and it is offset by one scaled pixel. The previous crop used a 10x
+   scale against a 26px box and showed a corner of the cape's edge, which is why
+   it looked like nothing. */
+.cape-thumb {
+  --cape-scale: 2.6;
+  width: calc(10px * var(--cape-scale));
+  height: calc(16px * var(--cape-scale));
+  background-image: var(--cape-url);
+  background-size: calc(64px * var(--cape-scale)) calc(32px * var(--cape-scale));
+  background-position: calc(-1px * var(--cape-scale)) calc(-1px * var(--cape-scale));
+  image-rendering: pixelated;
+  border-radius: 3px;
+}
+.no-cape-mark { width: 26px; height: 42px; display: grid; place-items: center; font-size: 18px; color: var(--muted); }
+
+.profile-identity { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.profile-identity strong { font-size: 17px; }
+.profile-identity span { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .profile-scene { height: 280px; }
+}
+
+
+/* ---------- the window this page owns ---------- */
+
+/* A page of its own, not a screen inside the launcher: it has to fill whatever
+   size the window manager gives it instead of sitting in a fixed box in the
+   corner. Only the controls scroll; the model stays put beside them. */
+html:has(body.skin-window), body.skin-window { height: 100%; margin: 0; overflow: hidden; }
+
+body.skin-window .screen-profile {
+  height: 100%;
+  display: flex;
+  padding: clamp(12px, 2vh, 22px) clamp(12px, 2vw, 24px);
+  box-sizing: border-box;
+}
+
+body.skin-window .panel {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body.skin-window .panel-head { flex: none; }
+
+body.skin-window .profile-layout {
+  flex: 1;
+  min-height: 0;
+  /* One layout at every size: the model on the left, the controls in a sidebar.
+     The sidebar gives up width before the stage does, so a small window looks
+     like a smaller version of a large one rather than a different screen. */
+  grid-template-columns: minmax(0, 1fr) clamp(240px, 34%, 380px);
+}
+
+body.skin-window .profile-stage { height: 100%; }
+body.skin-window .profile-scene { height: 100%; }
+
+/* The only scroll on the page. */
+body.skin-window .profile-side {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+}
+
+/* Only when a sidebar genuinely cannot fit does it go under the model. */
+@media (max-width: 520px) {
+  body.skin-window .profile-layout { grid-template-columns: 1fr; grid-template-rows: minmax(200px, 1fr) auto; }
+  body.skin-window .profile-stage { height: auto; }
+}
+
+
+/* Wheel zoom. The whole model is laid out in multiples of --skin-scale, so
+   changing that one value resizes every part, every face and every offset
+   together — there is no separate transform to keep in step. */
+body.skin-window .profile-stage { --skin-scale: 7px; }

@@ -1,0 +1,882 @@
+/* Home screen.
+   Loaded after app.css so it can take the main screen out of the generic
+   "panel on a page" layout the other screens use. This one is meant to read as
+   a game launcher: the artwork is the page, and the chrome floats on top of it.
+   Everything here is scoped under .screen-main / .home so no other screen moves. */
+
+.screen-main {
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.home {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  /* Top bar, then everything else; the hero sits at the bottom of the free row. */
+  grid-template-rows: auto 1fr;
+  isolation: isolate;
+}
+
+/* ---------- artwork ---------- */
+
+.home-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #0b0c10 url('app://launcher/assets/panorama.png') center 42% / cover no-repeat;
+  /* A very slow drift keeps a still image from looking like a dead screenshot.
+     40s is long enough that it reads as depth rather than as motion. */
+  animation: home-drift 48s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes home-drift {
+  from { transform: scale(1.06) translate3d(-0.8%, 0, 0); }
+  to   { transform: scale(1.12) translate3d(0.8%, -1%, 0); }
+}
+
+/* Two jobs: keep the bottom text legible, and stop the artwork from washing the
+   top bar out. Kept as one element so there is only one compositing layer. */
+.home-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(to top, #07080b 0%, #07080bf2 14%, #07080bbf 32%, #07080b4d 56%, #07080b14 78%, transparent 100%),
+    linear-gradient(to bottom, #07080bcc 0%, #07080b40 12%, transparent 26%),
+    radial-gradient(120% 90% at 50% 100%, transparent 40%, #07080b99 100%);
+}
+
+/* ---------- top bar ---------- */
+
+.home-top {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px clamp(18px, 3vw, 34px);
+}
+
+.home-logo {
+  height: clamp(26px, 3.4vw, 36px);
+  width: auto;
+  object-fit: contain;
+  flex: none;
+  filter: drop-shadow(0 2px 10px #0009);
+}
+
+.home-top-right {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Server status lives up here as a pill rather than in a card: it is a glance,
+   not a section. renderServers() builds <li class="server-row"> so the list
+   itself is the pill row. */
+.home-top .server-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+/* One pill per server, but reversed so the dot leads and the status word is
+   dropped: three pills reading "DUSMP Survival Offline" swallowed the whole bar. */
+.home-top .server-row {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  font-size: 11.5px;
+  border-radius: 999px;
+  background: #0b0d12a8;
+  border: 1px solid #ffffff14;
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 190px;
+}
+
+.home-top .server-row strong {
+  font-weight: 500;
+  color: #ccd0d6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* The word "Online" is redundant next to a green dot at this size, so the dot
+   carries the state and the label is kept for screen readers and for offline,
+   where the wording actually matters. */
+.home-top .status-online,
+.home-top .status-offline {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  /* Collapse the word itself; ::before is the whole visual. */
+  font-size: 0;
+  line-height: 0;
+}
+
+.home-top .status-online::before,
+.home-top .status-offline::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+  opacity: .95;
+}
+
+.home-top .status-online { color: #62d68c; }
+.home-top .status-offline { color: #ef8080; }
+
+.player-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 12px 5px 5px;
+  border-radius: 999px;
+  background: #0b0d12a8;
+  border: 1px solid #ffffff14;
+  backdrop-filter: blur(10px);
+  min-width: 0;
+}
+
+.player-chip .player-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: none;
+  background: #23252b center / cover no-repeat;
+}
+
+/* The head is the 8x8 square at (8,8) of the skin. At 28px that is a 3.5x
+   scale, so the whole 64-wide sheet is 224px and the crop starts at -28,-28.
+   Height stays "auto" so a legacy 64x32 skin is not stretched. */
+.player-chip .player-avatar.is-skin {
+  --head-scale: 3.5;
+  background-size: calc(64px * var(--head-scale)) auto;
+  background-position: calc(-8px * var(--head-scale)) calc(-8px * var(--head-scale));
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  border-radius: 7px;
+}
+
+.player-chip .player-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.player-chip .player-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-chip .player-kind {
+  font-size: 10px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #9aa0a9;
+}
+
+.screen-main .iconbtn {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #0b0d12a8;
+  border: 1px solid #ffffff14;
+  backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  transition: background .15s, transform .15s;
+}
+
+.screen-main .iconbtn:hover { background: #ffffff21; border-color: #ffffff2e; }
+.screen-main .iconbtn:active { transform: scale(.94); }
+
+/* Solid flat gear, so it reads at 17px where a stroked one turns to mush. */
+.screen-main .iconbtn .gear {
+  width: 17px;
+  height: 17px;
+  fill: #d7dade;
+  stroke: none;
+  transition: transform .5s cubic-bezier(.3, .7, .3, 1), fill .15s;
+}
+
+.screen-main .iconbtn:hover .gear { transform: rotate(60deg); fill: var(--gold); }
+
+/* ---------- banners ---------- */
+
+.home-banners {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  padding: 0 clamp(18px, 3vw, 34px);
+}
+
+.home-banners:not(:has(.banner:not([hidden]))) { display: none; }
+
+.screen-main .banner {
+  margin: 0;
+  border-radius: 10px;
+  background: #0b0d12d9;
+  backdrop-filter: blur(10px);
+}
+
+/* ---------- body: one bottom-anchored stack ---------- */
+
+/* Bottom-anchored 2x2. Left column is the action, right column the context.
+   Hero and news share the upper row and both sit on the baseline, so
+   "Ready to play" lands directly above PLAY and the news lands directly above
+   "Minecraft version" — without news ever entering the play row. */
+.home-body {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "hero news"
+    "play meta";
+  align-content: end;
+  align-items: end;
+  column-gap: clamp(18px, 3vw, 34px);
+  row-gap: clamp(12px, 2vh, 20px);
+  padding: clamp(14px, 2.4vh, 26px) clamp(18px, 3vw, 34px) clamp(16px, 2.6vh, 28px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-hero { grid-area: hero; align-self: end; }
+.home-play { grid-area: play; }
+.home-rail { grid-area: news; align-self: end; }
+.home-meta { grid-area: meta; }
+
+.home-hero {
+  min-width: 0;
+  animation: home-rise .42s cubic-bezier(.22, .68, .36, 1) both;
+}
+
+@keyframes home-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The eyebrow is a <p> inside .home-hero, so it has to out-specify the generic
+   paragraph rule below — otherwise it is repainted grey at body size and
+   vanishes into the bright sky in the artwork. */
+.home-hero > p.home-eyebrow {
+  margin: 0 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 1px 10px #000000b3;
+}
+
+.home-hero > p.home-eyebrow::after {
+  content: '';
+  width: clamp(28px, 6vw, 64px);
+  height: 1px;
+  background: linear-gradient(to right, var(--gold), transparent);
+}
+
+.home-hero h1 {
+  margin: 0 0 9px;
+  font-size: clamp(28px, 4.4vw, 48px);
+  font-weight: 650;
+  letter-spacing: -.035em;
+  line-height: 1.05;
+  text-wrap: balance;
+  text-shadow: 0 2px 24px #000000b3;
+}
+
+/* Artwork sits directly behind this, so it carries its own shadow rather than
+   relying on the scrim alone. */
+.home-hero > p:not(.home-eyebrow) {
+  margin: 0;
+  font-size: clamp(13px, 1.4vw, 15px);
+  color: #d5d8dd;
+  max-width: 46ch;
+  text-shadow: 0 1px 12px #000000cc;
+}
+
+.home-hero > p[hidden] { display: none; }
+
+/* ---------- action ---------- */
+
+.home-play {
+  width: min(300px, 100%);
+  animation: home-rise .42s .06s cubic-bezier(.22, .68, .36, 1) both;
+}
+
+.screen-main .btn-play {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  /* A status label must never wrap the button to two lines. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #1a1305;
+  background: linear-gradient(170deg, #ffcb5c 0%, var(--gold) 42%, #e69412 100%);
+  box-shadow: 0 10px 30px #ffb82933, 0 2px 0 #ffffff3d inset;
+  overflow: hidden;
+  transition: transform .14s, box-shadow .18s, filter .18s;
+}
+
+.screen-main .btn-play:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px #ffb82947, 0 2px 0 #ffffff4d inset;
+  filter: saturate(1.06);
+}
+
+.screen-main .btn-play:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 6px 18px #ffb82933, 0 2px 0 #ffffff29 inset;
+}
+
+/* A slow sheen so the primary action has a little life without blinking at the
+   player. It only runs while the button is actually usable. */
+.screen-main .btn-play:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 42%;
+  left: -60%;
+  background: linear-gradient(100deg, transparent, #fff6 50%, transparent);
+  animation: home-sheen 4.6s ease-in-out 1.4s infinite;
+}
+
+@keyframes home-sheen {
+  0%   { left: -60%; }
+  38%  { left: 130%; }
+  100% { left: 130%; }
+}
+
+/* Stop: the same control, now destructive. Red rather than gold so a running
+   game is never confused with an idle one at a glance, and no sheen — this is
+   not something to invite a click on. */
+.screen-main .btn-play.is-stop,
+.screen-main .btn-play.is-stop:disabled {
+  color: #fff1f1;
+  background: linear-gradient(170deg, #d8524f 0%, #b93b38 55%, #932b29 100%);
+  border: 0;
+  box-shadow: 0 10px 30px #b93b3833, 0 2px 0 #ffffff2e inset;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  backdrop-filter: none;
+}
+
+.screen-main .btn-play.is-stop:hover:not(:disabled) {
+  box-shadow: 0 16px 40px #b93b3847, 0 2px 0 #ffffff3d inset;
+  filter: saturate(1.08);
+}
+
+.screen-main .btn-play.is-stop::after { display: none; }
+
+/* Busy state: same shape, quieter voice. Sentence case and a smaller size so a
+   progress label reads as status rather than as a second call to action. */
+.screen-main .btn-play:disabled {
+  color: #d8d4cb;
+  background: #14161ccc;
+  border: 1px solid #ffffff1f;
+  box-shadow: none;
+  opacity: 1;
+  backdrop-filter: blur(8px);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  text-transform: none;
+}
+
+.screen-main .play-bar {
+  height: 3px;
+  margin: 10px 0 0;
+  border-radius: 999px;
+  background: #ffffff1f;
+}
+
+.screen-main .play-bar-fill {
+  background: linear-gradient(90deg, var(--gold), #ffd884);
+  border-radius: 999px;
+  transition: width .25s ease-out;
+}
+
+.screen-main .play-sub {
+  margin: 9px 0 0;
+  min-height: 16px;
+  font-size: 12px;
+  text-align: start;
+  color: #b9bdc4;
+}
+
+/* Versions and path: beside the action, deliberately quiet. */
+.home-meta {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0 0 3px;
+  font-size: 11.5px;
+  min-width: 0;
+}
+
+.home-meta > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+
+.home-meta dt {
+  color: #868c95;
+  letter-spacing: .04em;
+  flex: none;
+}
+
+.home-meta dd {
+  margin: 0;
+  color: #dcdee2;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.home-meta .installation-path dd {
+  color: #9aa0a9;
+  direction: ltr;
+}
+
+/* ---------- news ---------- */
+
+/* A short strip in the right column. max-height keeps it honest: the hero and
+   PLAY keep their space and long news scrolls inside its own box. */
+.home-rail {
+  width: 100%;
+  max-height: clamp(76px, 15vh, 118px);
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: #0b0d12b8;
+  border: 1px solid #ffffff12;
+  backdrop-filter: blur(14px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  animation: home-rise .42s .12s cubic-bezier(.22, .68, .36, 1) both;
+}
+
+.home-rail[hidden] { display: none; }
+
+.home-rail .card-title {
+  margin: 0 0 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #8c929b;
+}
+
+.home-rail .news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.home-rail .news-row {
+  display: grid;
+  gap: 2px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid #ffffff0f;
+  font-size: 12px;
+}
+
+.home-rail .news-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.home-rail .news-row strong { font-weight: 600; color: #e7e9ec; }
+
+.home-rail .news-row p {
+  margin: 0;
+  color: #969ba3;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.home-rail .card-empty { margin: 0; font-size: 12px; color: #8c929b; }
+
+/* ---------- responsive ---------- */
+
+/* Narrow: one column, same reading order. News still sits above the versions
+   and below the action, so nothing is hidden and nothing crowds PLAY. */
+@media (max-width: 760px) {
+  .home-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "hero"
+      "play"
+      "news"
+      "meta";
+    grid-template-rows: minmax(0, 1fr) auto auto auto;
+    row-gap: 11px;
+  }
+
+  .home-play { width: 100%; }
+  .home-rail { max-height: clamp(70px, 13vh, 104px); }
+  .home-meta { gap: 3px; }
+}
+
+@media (max-width: 560px) {
+  .home-top { gap: 10px; padding: 14px 16px; }
+  .player-chip .player-text { display: none; }
+  .player-chip { padding: 5px; }
+  .home-play { width: 100%; }
+  .home-meta { flex-basis: 100%; }
+  .home-body { padding: 14px 16px 18px; }
+}
+
+/* Short windows: give the hero less vertical room rather than letting the dock
+   slide off the bottom edge. */
+@media (max-height: 560px) {
+  .home-hero h1 { font-size: clamp(24px, 4vw, 32px); }
+  .home-hero > p { display: none; }
+  .screen-main .btn-play { min-height: 50px; font-size: 17px; }
+  .home-body { padding-bottom: 16px; }
+  .home-meta { gap: 4px; }
+  .home-rail { max-height: 96px; padding: 10px 12px; }
+  .home-rail .card-title { margin-bottom: 7px; }
+}
+
+/* Very wide: keep the composition anchored instead of stretching the hero
+   across a 4K panel. */
+@media (min-width: 1500px) {
+  .home-body { padding-inline: clamp(34px, 6vw, 96px); }
+  .home-top { padding-inline: clamp(34px, 6vw, 96px); }
+  .home-banners { padding-inline: clamp(34px, 6vw, 96px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-art { animation: none; transform: scale(1.06); }
+  .screen-main .btn-play:not(:disabled)::after { display: none; }
+}
+
+/* News rows expand on click: clipped text with no way to read the rest is worse
+   than a slightly taller rail. Only rows that really overflow show the hint. */
+.home-rail .news-row{cursor:default;border-radius:8px;padding:8px 10px;margin:0 -10px;transition:background .14s}
+.home-rail .news-row.is-clipped{cursor:pointer}
+.home-rail .news-row.is-clipped:hover,.home-rail .news-row:focus-visible{background:#ffffff0d;outline:none}
+.home-rail .news-row:focus-visible{box-shadow:0 0 0 2px var(--gold) inset}
+.home-rail .news-row.is-open p{-webkit-line-clamp:unset;display:block}
+.home-rail .news-row.is-clipped:not(.is-open) strong::after{content:"▾";margin-inline-start:7px;font-size:10px;color:var(--gold);vertical-align:middle}
+.home-rail .news-row.is-open strong::after{content:"▴";margin-inline-start:7px;font-size:10px;color:var(--gold);vertical-align:middle}
+/* Expanding needs somewhere to expand into. */
+.home-rail:has(.news-row.is-open){max-height:min(60vh,380px)}
+.news-auto{display:block;margin-top:5px;font-size:10px;letter-spacing:.04em;color:#8c929b;font-style:italic}
+
+/* ---------- account drawer ----------
+
+   The chip and its caret share one pill, so the arrow reads as part of the
+   name rather than as a separate control. The caret is the only thing that
+   rotates: pointing up means "there is more above", pointing down means the
+   drawer is already open. */
+
+.player-chip-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-radius: 999px;
+  background: #0b0d12a8;
+  border: 1px solid #ffffff14;
+  backdrop-filter: blur(10px);
+}
+
+.player-chip-wrap > .player-chip {
+  background: none;
+  border: 0;
+  backdrop-filter: none;
+  padding-inline-end: 6px;
+}
+
+.chip-caret {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 30px;
+  margin-inline-end: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #9aa0a9;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.chip-caret:hover { background: #ffffff14; color: var(--gold); }
+
+.chip-caret .caret {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+  stroke: none;
+  transition: transform .18s cubic-bezier(.3, .7, .3, 1);
+}
+
+.chip-caret[aria-expanded="true"] .caret { transform: rotate(180deg); }
+
+.account-drawer {
+  position: absolute;
+  top: calc(100% + 9px);
+  inset-inline-end: 0;
+  z-index: 14;
+  width: 268px;
+  max-height: min(58vh, 430px);
+  overflow: auto;
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #0c0e13f5;
+  border: 1px solid #ffffff1f;
+  box-shadow: 0 18px 46px #000b;
+  backdrop-filter: blur(14px);
+  animation: drawer-in .14s ease-out;
+}
+
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateY(-7px); }
+}
+
+.drawer-title {
+  margin: 1px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #9aa0a9;
+}
+
+.drawer-hint {
+  margin: 0 4px;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #7d838c;
+}
+
+.account-list {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.account-row:hover,
+.account-row.is-target { background: #ffffff14; }
+
+.account-row.is-active { box-shadow: inset 0 0 0 1px #ffb82959; background: #ffb8290f; }
+
+/* Same 8x8 head crop as the chip, one scale step smaller. */
+.account-head {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 6px;
+  background: #23252b center / cover no-repeat;
+}
+
+.account-head.is-skin {
+  --head-scale: 3.25;
+  background-size: calc(64px * var(--head-scale)) auto;
+  background-position: calc(-8px * var(--head-scale)) calc(-8px * var(--head-scale));
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+}
+
+.account-row .account-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.account-row .account-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-row .account-kind {
+  font-size: 9.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #9aa0a9;
+}
+
+.account-row .account-badge {
+  margin-inline-start: auto;
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.drawer-add {
+  padding: 8px 10px;
+  border: 1px dashed #ffffff26;
+  border-radius: 10px;
+  background: none;
+  color: #dfe2e6;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.drawer-add:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ---------- right-click menu ---------- */
+
+.ctx-menu {
+  position: fixed;
+  z-index: 40;
+  min-width: 172px;
+  display: grid;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 11px;
+  background: #0c0e13fa;
+  border: 1px solid #ffffff1f;
+  box-shadow: 0 16px 42px #000c;
+  backdrop-filter: blur(14px);
+}
+
+.ctx-item {
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #dfe2e6;
+  font-size: 12.5px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ctx-item:hover { background: #ffffff16; }
+.ctx-item:disabled { opacity: .4; cursor: default; background: none; }
+.ctx-danger { color: #f0908c; }
+.ctx-danger:hover:not(:disabled) { background: #f0908c1f; }
+
+/* The folder does not belong to the gear's rotation. */
+.screen-main .iconbtn:hover .folder { transform: translateY(-1px) scale(1.07); }
+
+/* ---------- editions ---------- */
+
+.edition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+
+.edition-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 18px;
+  text-align: start;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #ffffff08;
+  color: inherit;
+  cursor: pointer;
+}
+
+.edition-card:hover:not(:disabled) { border-color: var(--gold); background: #ffb82912; }
+.edition-card.is-current { border-color: var(--gold); background: #ffb82914; }
+.edition-card:disabled { opacity: .45; cursor: default; }
+.edition-card h2 { margin: 0; font-size: 17px; }
+.edition-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.edition-card .edition-meta { font-size: 11.5px; color: #8b919b; letter-spacing: .02em; }
+.edition-card .edition-current { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold); }
+
+/* The home screen's version: the same choice, as a two-button segment. */
+.edition-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  background: #0b0d12a8;
+  border: 1px solid #ffffff14;
+  backdrop-filter: blur(10px);
+  align-self: flex-start;
+}
+
+.edition-switch button {
+  padding: 7px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: #c6ccd6;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.edition-switch button:hover:not(:disabled):not(.is-current) { background: #ffffff14; color: #fff; }
+.edition-switch button.is-current { background: var(--gold); color: #1d1607; }
+.edition-switch button:disabled { opacity: .4; cursor: default; }

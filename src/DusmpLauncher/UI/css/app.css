@@ -1,0 +1,190 @@
+@import url('app://launcher/css/loader.css');
+:root{color-scheme:dark;--gold:#ffb829;--ink:#090a0d;--panel:rgba(13,15,19,.94);--muted:#a2a8b1;--line:rgba(255,255,255,.11);font:15px/1.45 Inter,system-ui,-apple-system,'Segoe UI',sans-serif}*{box-sizing:border-box}body{margin:0;color:#f7f7f5;background:var(--ink);min-width:320px;min-height:100vh}.app-bg{position:fixed;inset:0;z-index:-1;overflow:hidden}.app-bg-image{width:100%;height:100%;object-fit:cover;filter:blur(2px) brightness(.35);transform:scale(1.03)}.app-bg-veil{position:absolute;inset:0;background:linear-gradient(120deg,#07080adf,#13100ad9)}button,input,textarea{font:inherit}.titlebar{height:38px;display:flex;justify-content:space-between;align-items:center;background:#08090cdd;border-bottom:1px solid #ffffff14;user-select:none}.titlebar-drag{height:100%;display:flex;align-items:center;gap:9px;padding:0 14px;flex:1;-webkit-app-region:drag}.titlebar-icon{height:20px;width:20px;object-fit:contain}.titlebar-title{font-size:12px;font-weight:700;letter-spacing:.08em}.titlebar-version{font-size:11px;color:var(--muted)}.titlebar-controls{display:flex;height:100%}.winbtn{width:44px;border:0;background:none;color:#eee;cursor:pointer}.winbtn:hover{background:#ffffff18}.winbtn-close:hover{background:#b82020}.winbtn svg{width:13px;stroke:currentColor;stroke-width:1.3;fill:none}.screen{display:none;min-height:calc(100vh - 38px);padding:30px 28px;align-items:center;justify-content:center}.screen.is-active{display:flex}.loading-shell{width:min(540px,90vw);text-align:center}.brand-logo{width:min(310px,75vw);height:auto;object-fit:contain;margin-bottom:24px}.loader{margin:0 auto 22px}.loading-stage,.loading-percent{color:#f5f2eb}.loading-stage{font-size:16px}.loading-percent{font-size:13px;color:var(--muted)}.loading-file{font-size:12px;color:var(--muted);overflow-wrap:anywhere}.loading-bar,.play-bar{height:6px;background:#ffffff1c;border-radius:9px;overflow:hidden;margin:14px 0}.loading-bar-fill,.play-bar-fill{height:100%;width:0;background:var(--gold);transition:width .2s}.loading-meta{display:flex;justify-content:center;gap:28px;color:var(--muted);font-size:12px}.loading-meta-item dt{opacity:.75}.loading-meta-item dd{margin:3px 0;color:#fff}.panel{width:min(760px,94vw);max-height:calc(100vh - 90px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:30px;box-shadow:0 20px 80px #0008;backdrop-filter:blur(16px)}.panel-tall{min-height:440px}.panel-narrow{width:min(540px,94vw)}.panel-head{margin-bottom:24px}.panel-title{margin:0 0 7px;font-size:25px;letter-spacing:-.03em}.panel-sub{margin:0;color:var(--muted)}.search-row{margin:18px 0}.search-input,.text-input,.field input,.field textarea{width:100%;color:#fff;background:#08090ccc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;outline:none}.search-input:focus,.text-input:focus,.field input:focus,.field textarea:focus{border-color:var(--gold)}.picker-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:300px;overflow:auto;padding:2px}.picker-item{display:flex;align-items:center;gap:10px;text-align:left;color:#eee;background:#ffffff08;border:1px solid transparent;border-radius:10px;padding:11px;cursor:pointer}.picker-item:hover,.picker-item.selected{border-color:var(--gold);background:#ffb82913}.picker-flag{font-size:20px}.picker-name{flex:1}.picker-native{font-size:12px;color:var(--muted)}.picker-empty{color:var(--muted);text-align:center;padding:20px}.panel-foot{display:flex;align-items:center;gap:10px;margin-top:23px}.panel-foot-spacer{flex:1}.btn{border:1px solid transparent;border-radius:10px;padding:11px 17px;font-weight:650;cursor:pointer;transition:transform .12s,background .12s}.btn:hover{transform:translateY(-1px)}.btn-primary{background:var(--gold);color:#1d1607}.btn-primary:hover{background:#ffd070}.btn-ghost{border-color:var(--line);color:#f4f4f4;background:#ffffff09}.btn-small{padding:8px 12px;font-size:13px}.btn-block{width:100%}.account-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.account-card,.subpanel,.settings-group,.mod-row,.server-row,.news-row{background:#ffffff08;border:1px solid var(--line);border-radius:13px;padding:17px}.account-card-title,.subpanel-title{margin:0 0 6px}.account-card-desc,.account-warning,.field-hint,.settings-group p{color:var(--muted);font-size:13px}.account-warning{color:#f6cc76}.subpanel{margin-top:16px}.device-code{font:700 28px ui-monospace,monospace;letter-spacing:.14em;text-align:center;color:var(--gold)}.device-actions,.settings-actions{display:flex;gap:10px;flex-wrap:wrap}.field{margin:12px 0}.field-label{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}.field-error{color:#ff8888;font-size:12px}.mods-list{display:grid;gap:9px;max-height:320px;overflow:auto}.mod-row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}.mod-icon{width:42px;height:42px;border-radius:9px;object-fit:cover;background:#222}.mod-row h3{margin:0;font-size:15px}.mod-row p{margin:3px 0;color:var(--muted);font-size:13px}.mod-row small{color:#dfb85f}.switch{accent-color:var(--gold);width:19px;height:19px}.mods-total{color:var(--muted);font-size:13px}.screen-main{align-items:stretch}.main-grid{width:min(1000px,100%);margin:auto;display:grid;grid-template-columns:1fr 300px;gap:15px;align-content:start}.main-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:8px 0 17px;border-bottom:1px solid var(--line)}.brand-logo-small{width:150px;margin:0}.main-head-right,.player{display:flex;align-items:center;gap:12px}.player-avatar{width:42px;height:42px;border-radius:9px;background:#272727;object-fit:cover}.player-text{display:grid}.player-kind{font-size:12px;color:var(--muted)}.iconbtn{height:39px;width:39px;background:#ffffff0c;color:#fff;border:1px solid var(--line);border-radius:10px;cursor:pointer}.iconbtn svg{width:22px;stroke:currentColor;fill:none}.banner{grid-column:1/-1;padding:12px 15px;border-radius:10px;background:#ffb82918;border:1px solid #ffb82955}.banner-text{margin:0}.play-block{grid-column:1;display:flex;flex-direction:column;justify-content:center;align-items:stretch;min-height:210px;padding:25px;background:#ffffff09;border:1px solid var(--line);border-radius:16px}.btn-play{min-height:64px;background:var(--gold);color:#171208;font-size:22px}.play-sub{text-align:center;color:var(--muted);font-size:13px}.main-status,.main-side{display:grid;gap:12px}.status-card,.main-side section{background:#ffffff09;border:1px solid var(--line);border-radius:14px;padding:17px}.status-card h2,.main-side h2{margin:0 0 11px;font-size:14px}.kv{margin:0}.kv-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;color:var(--muted);font-size:13px}.kv-row dd{margin:0;color:#fff}.main-side{grid-column:2;grid-row:3/6}.main-side section{min-height:90px}.server-row,.news-row{padding:10px;margin-top:8px;font-size:13px}.status-online{color:#7bd89a}.status-offline{color:#f18c8c}.settings-content{display:grid;grid-template-columns:1fr 1fr;gap:12px}.settings-group{padding:15px}.settings-group-title{margin:0 0 13px;font-size:15px}.check-row{display:flex;gap:9px;align-items:center;margin:10px 0;font-size:13px}.check-row input{accent-color:var(--gold)}.field-inline{display:flex;align-items:center;gap:10px}.field-inline .field-label{flex:1}.text-input-narrow{width:90px}.kv-compact{margin-top:10px}.error-message{color:#ffc56d}.error-detail{white-space:pre-wrap;color:#b8b8b8;font-size:11px;max-height:140px;overflow:auto}.toasts{position:fixed;right:18px;bottom:18px;display:grid;gap:8px}.toast{padding:10px 14px;background:#16191d;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 30px #0008}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}@media(max-width:760px){.screen{padding:18px 12px}.panel{padding:21px}.picker-list{grid-template-columns:1fr}.account-grid,.settings-content{grid-template-columns:1fr}.main-grid{grid-template-columns:1fr}.main-side{grid-column:1;grid-row:auto}.main-head{grid-column:1}.play-block{grid-column:1}.loading-meta{gap:15px}.titlebar{height:34px}.screen{min-height:calc(100vh - 34px)}}
+.launcher-list{display:grid;gap:10px;max-height:340px;overflow:auto}.launcher-card{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:14px;padding:14px;background:#ffffff08;border:1px solid var(--line);border-radius:12px}.launcher-mark{width:44px;height:44px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(135deg,#ffb829,#e18a00);color:#211706;font-weight:850;letter-spacing:.05em}.launcher-card-body h2{font-size:15px;margin:0}.launcher-card-body p{font-size:13px;color:#e8c77c;margin:3px 0}.launcher-card-body small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.launcher-card button:disabled{opacity:.45;cursor:not-allowed}
+
+/* Keep the artwork and gold accent; let the native window manager own resize. */
+html,body{height:100%;overflow:hidden}
+body{min-width:0;min-height:0}
+button:disabled{cursor:default;opacity:.5;transform:none}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button,input{touch-action:manipulation}
+#screens{height:100%;min-height:0}
+.screen{height:100%;min-height:0;padding:clamp(14px,3vh,28px) clamp(16px,3vw,32px);overflow:hidden}
+.screen.is-active{animation:screen-enter .16s ease-out}
+.panel{width:min(760px,100%);max-height:100%;min-height:0;padding:clamp(20px,3vw,30px);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;backdrop-filter:none;box-shadow:0 16px 60px #0005}
+.panel-tall{height:min(610px,100%);min-height:0}
+.panel-narrow{width:min(570px,100%)}
+.panel-head{margin-bottom:18px;flex:none}
+.panel-head-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.panel-title{font-size:clamp(22px,3vw,28px);line-height:1.2;margin:0 0 6px}
+.panel-sub:empty{display:none}.panel-sub{font-size:14px}
+.search-row{margin:0 0 14px;flex:none}
+.picker-list,.launcher-list,.mods-list{flex:1;min-height:0;max-height:none;overflow:auto;overscroll-behavior:contain;align-content:start;scrollbar-gutter:stable;padding:2px 6px 2px 2px}
+.picker-list{gap:3px 10px}.picker-item{padding:10px 8px;background:transparent;border-radius:7px;min-width:0}
+.picker-name{font-size:14px}.picker-native{max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-flag{display:block;width:28px;height:21px;flex:0 0 28px;object-fit:contain;border-radius:2px}
+.flag-placeholder{border:1px solid #ffffff25;background:radial-gradient(ellipse at center,transparent 35%,#ffffff13 36%,transparent 42%)}
+.is-selecting .picker-item,.is-selecting .launcher-card button{pointer-events:none;opacity:.6}
+.panel-foot{flex:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);gap:12px;min-height:0}
+.panel-foot:has(> .panel-foot-spacer:only-child){display:none}
+#screen-onboarding-language .panel-foot:has(#language-back[hidden]){display:none}
+.panel-foot-spacer{flex:1}.mods-total{flex:1}
+.account-cards,.account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.account-card{border:none;border-radius:0;background:none;padding:6px 0;display:flex;flex-direction:column;min-width:0}
+.account-card+.account-card{border-inline-start:1px solid var(--line);padding-inline-start:20px}
+.account-card-title{font-size:17px}.account-card-desc{margin:0 0 18px;min-height:36px}
+.account-card .btn{margin-top:auto}.account-warning{font-size:12px;line-height:1.5}
+#screen-onboarding-play-mode .panel-narrow{width:min(700px,100%)}
+.subpanel{border:none;background:none;padding:0;margin:0;min-height:0;overflow:auto}
+.subpanel-title{font-size:21px}.subpanel-sub{color:var(--muted);font-size:14px;margin:6px 0 18px}
+.device-actions{gap:8px;margin-top:18px}.auth-panel{flex:1}
+.device-qr{width:150px;height:150px;padding:8px;background:#fff;border-radius:6px;margin:14px 0}
+.device-qr svg{width:100%;height:100%;display:block}.device-link{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere;margin-bottom:12px}
+.device-code-row{display:flex;align-items:center;gap:16px}.device-code{margin:14px 0;font-size:22px}
+#device-code-details{margin-top:18px}summary{cursor:pointer;color:var(--muted);font-size:12px}
+/* One optional mod. The whole row is the label for its switch, so the target is
+   the row and not a 42px control floating at the right edge. */
+.mod-row{border:0;border-bottom:1px solid var(--line);background:none;border-radius:10px;padding:11px 3px;gap:13px;grid-template-columns:36px minmax(0,1fr) auto;cursor:pointer;transition:background .14s}
+.mod-row:hover{background:#ffffff0a}
+.mod-row:last-child{border-bottom:0}
+.mod-row:has(.switch:focus-visible){background:#ffffff0a;box-shadow:0 0 0 2px var(--gold) inset}
+.mod-icon{width:36px;height:36px;border-radius:9px;background:#15171c;border:1px solid #ffffff12;object-fit:cover}
+/* Rows have no description most of the time; a grid collapses the empty slot
+   instead of leaving the margins an empty <p> used to reserve. */
+.mod-body{display:grid;gap:3px;min-width:0}
+.mod-name{display:flex;align-items:center;gap:7px;min-width:0;font-size:14.5px;font-weight:600;line-height:1.25}
+.mod-name>span{flex:none}
+.mod-desc{color:var(--muted);font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mod-new{padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#1d1607;background:var(--gold)}
+.mod-tag{justify-self:start;padding:2px 8px;border-radius:999px;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:#9ea4ad;background:#ffffff0d;border:1px solid #ffffff14}
+
+/* A pill switch rather than the platform checkbox: at 19px the native control
+   read as an afterthought next to a 36px icon, and its checked state was the
+   only thing telling the two apart. */
+.switch{appearance:none;-webkit-appearance:none;position:relative;flex:none;width:42px;height:24px;margin:0;border-radius:999px;background:#ffffff14;border:1px solid #ffffff21;cursor:pointer;transition:background .16s,border-color .16s}
+.switch::after{content:'';position:absolute;top:50%;left:3px;width:16px;height:16px;border-radius:50%;background:#c3c8cf;transform:translateY(-50%);transition:transform .16s,background .16s}
+.switch:checked{background:var(--gold);border-color:#ffca5e}
+.switch:checked::after{background:#1d1607;transform:translateY(-50%) translateX(18px)}
+.switch:disabled{opacity:.5;cursor:default}
+.switch:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+/* The shared list rule reserves a scrollbar gutter so the language picker does
+   not jump the moment it starts scrolling. Here that reserved strip pushed the
+   switch 15px inside the panel while the footer button stayed flush with its
+   edge — that gap is the misalignment. This list is short, so give it back and
+   let the overlay scrollbar float when it does overflow. */
+.mods-list{padding:2px 0;scrollbar-gutter:auto}
+
+/* Settings checkboxes. The platform control carries its own asymmetric margins
+   (WebKit ships 3px 3px 3px 4px) and an intrinsic size that ignores the row's
+   font, so it never lined up with its label however the row was centred.
+   Drawing the box ourselves is what actually fixes the alignment. */
+.check-row{gap:10px;margin:11px 0;align-items:center}
+.check-row input[type=checkbox]{appearance:none;-webkit-appearance:none;margin:0;flex:none;width:18px;height:18px;border-radius:5px;background:#ffffff0d;border:1px solid #ffffff2b;cursor:pointer;display:grid;place-items:center;transition:background .14s,border-color .14s}
+.check-row input[type=checkbox]:hover{border-color:#ffffff45}
+.check-row input[type=checkbox]:checked{background:var(--gold);border-color:#ffca5e}
+/* A drawn tick: two borders on a rotated box, so it scales with the control
+   and needs no icon font or extra request. */
+.check-row input[type=checkbox]::after{content:'';width:4.5px;height:9px;margin-top:-2px;border:solid #1d1607;border-width:0 2px 2px 0;transform:rotate(45deg) scale(0);transition:transform .14s}
+.check-row input[type=checkbox]:checked::after{transform:rotate(45deg) scale(1)}
+.check-row input[type=checkbox]:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.check-row label{cursor:pointer;line-height:1.3}
+.launcher-card{border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;padding:12px 2px;grid-template-columns:42px minmax(0,1fr) auto;gap:12px}
+.launcher-mark{display:block;width:40px;height:40px;object-fit:contain;border-radius:0;background:none;padding:1px}
+.launcher-card-body p{font-size:12px;margin:3px 0 5px;color:var(--muted)}.launcher-card-body details small{display:block;margin-top:6px;overflow-wrap:anywhere}
+.launcher-card button{font-size:12px;padding:9px 12px}.launcher-card button:disabled{max-width:140px}
+.loading-shell{width:min(500px,100%);max-height:100%;overflow:auto}.loading-shell .brand-logo{width:230px;max-width:70%;margin-bottom:20px}
+.loading-shell .loader{margin-bottom:14px}.loading-stage{font-size:17px;font-weight:600;margin:0 0 15px}.loading-percent{margin:8px 0}
+.loading-meta{margin:8px 0 0;gap:12px;align-items:center;flex-direction:row-reverse;flex-wrap:wrap;font-size:13px}
+.loading-meta dt{display:none}.loading-meta dd{margin:0;color:var(--muted)}.loading-details{margin:24px 0 0;color:var(--muted);font-size:11px}.loading-file{font-size:11px}
+.screen-main{overflow:auto;align-items:stretch;padding-top:18px}
+.main-grid{display:flex;flex-direction:column;width:min(1100px,100%);gap:16px;margin:0 auto;min-height:100%}
+.main-head{flex:none;padding:0 0 12px;border:0}.brand-logo-small{width:130px}
+.main-head-right{gap:16px}.player-avatar{width:34px;height:34px;border-radius:6px}.player-name{font-size:14px}
+.iconbtn{background:#090a0d55;border:0}.iconbtn:hover{background:#ffffff18}
+.banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;font-size:13px;background:#121212cc;border-color:#ffb82955}
+.play-block{flex:1;min-height:280px;position:relative;overflow:hidden;border:1px solid #ffffff16;border-radius:14px;padding:clamp(22px,4vw,38px);display:flex;align-items:stretch;justify-content:flex-end;background:linear-gradient(0deg,#090a0df5 0%,#090a0d8c 60%,#090a0d18 100%),url('app://launcher/assets/panorama.png') center 45%/cover}
+.play-heading{margin:auto 0 22px}.project-label{margin:0 0 8px;letter-spacing:.18em;font-size:12px;font-weight:700;color:var(--gold)}
+.play-heading h1{font-size:clamp(27px,4vw,40px);font-weight:650;letter-spacing:-.035em;line-height:1.15;margin:0 0 8px}.play-heading>p:last-child{font-size:14px;color:#dadbdc;margin:0}
+.play-action{max-width:320px}.btn-play{width:100%;min-height:56px;font-size:20px;letter-spacing:.04em}.play-sub{margin:8px 0 0;font-size:12px;min-height:18px}.play-bar{margin:7px 0 0;height:4px}
+.installation-meta{display:flex;gap:8px 24px;margin:22px 0 0;flex-wrap:wrap;color:var(--muted);font-size:11px}
+.installation-meta div{display:flex;gap:7px;min-width:0}.installation-meta dd{margin:0;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40ch}.installation-path{flex-basis:100%}
+.main-columns{display:grid;grid-template-columns:minmax(180px,.65fr) minmax(0,1.35fr);gap:24px;flex:none;max-height:140px;overflow:auto}
+.main-columns .card:only-child{grid-column:1/-1}.card-title{font-size:12px;color:var(--muted);font-weight:500;margin:0 0 8px}
+.server-list,.news-list{list-style:none;padding:0;margin:0;display:grid;gap:6px}.server-row,.news-row{border:0;background:none;padding:0;margin:0;border-radius:0;font-size:12px}.server-row{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.news-row p{margin:3px 0 0;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.card-empty{margin:0;color:var(--muted);font-size:12px}
+.settings-scroll{min-height:0;flex:1;overflow:auto;padding-inline-end:6px;overscroll-behavior:contain}
+.settings-group{background:none;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:4px 0 18px;margin-bottom:18px}.settings-group:last-child{border:0;margin-bottom:0}.settings-group-title{font-size:14px;margin:0 0 14px;font-weight:600}
+.setting-row{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:13px}.setting-label{min-width:95px}.setting-value{flex:1;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis}
+.advanced-settings>summary{font-size:14px}.advanced-settings[open]>summary{margin-bottom:18px}.field-inline{flex-wrap:wrap}.field-inline input[type=range]{flex:1;width:130px;min-width:100px;padding:0;accent-color:var(--gold)}.field-output{min-width:58px;text-align:end;font-size:12px}.text-input-narrow{max-width:85px}
+.settings-actions{margin:16px 0}.field-hint{margin-top:6px;line-height:1.5}.check-row{line-height:1.5}.error-details{margin:8px 0 15px}.error-message{font-size:15px;line-height:1.5}
+.toasts{z-index:50;max-width:calc(100vw - 36px);pointer-events:none}.toast{max-width:420px;overflow-wrap:anywhere;font-size:13px;animation:screen-enter .15s ease-out}
+@keyframes screen-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){.picker-list{grid-template-columns:1fr}.main-columns{gap:18px}.play-heading{margin-bottom:16px}.installation-meta{margin-top:16px}.setting-label{min-width:75px}.setting-row .btn{padding:7px 9px}.screen{padding:14px}.main-grid{gap:12px}.play-block{padding:24px;min-height:245px}.panel{padding:22px}.account-cards,.account-grid{gap:16px}.account-card+.account-card{padding-inline-start:16px}}
+@media(max-height:570px){.screen{padding-top:12px;padding-bottom:12px}.panel{padding:18px 22px}.panel-head{margin-bottom:12px}.panel-title{font-size:23px}.panel-foot{margin-top:10px;padding-top:10px}.main-head{padding:0}.main-grid{gap:10px}.play-block{min-height:220px;padding:20px 28px}.play-heading{margin-bottom:14px}.play-heading h1{font-size:28px}.installation-meta{margin-top:12px}.main-columns{max-height:66px}.device-qr{width:108px;height:108px;margin:8px 0}.device-actions{margin-top:12px}.loading-shell .brand-logo{width:180px;margin-bottom:12px}.loading-shell .loader{transform:scale(.8);margin-bottom:8px}.loading-details{margin-top:14px}}
+@media(max-width:480px){.account-cards,.account-grid{grid-template-columns:1fr;gap:12px}.account-card+.account-card{padding:12px 0 0;border-inline-start:0;border-top:1px solid var(--line)}.account-card-desc{min-height:0;margin-bottom:12px}.main-head .brand-logo{width:100px}.player-kind{display:none}.main-head-right{gap:8px}.main-columns{grid-template-columns:1fr}.installation-meta{gap:6px 16px}.setting-row{flex-wrap:wrap}.setting-value{flex-basis:40%}.launcher-card{grid-template-columns:36px minmax(0,1fr)}.launcher-card button{grid-column:2}.panel{padding:16px}}
+
+/* ---- Sign-in screen ---- */
+/* Kept plain on purpose: a button, a code, one line. Anything more turns a
+   30-second task into a page to read. */
+.account-card-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#ffffff0f;margin-bottom:11px}
+.account-card-icon svg{width:18px;height:18px;fill:currentColor;color:var(--muted)}
+.account-card-primary .account-card-icon{background:#ffb8291f}
+.account-card-primary .account-card-icon svg{color:var(--gold)}
+
+.auth-panel{display:flex;flex-direction:column;align-items:stretch;gap:0}
+.auth-panel .btn-block{margin:0}
+
+/* "Or" divider between the browser button and the manual path. */
+.auth-or{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:12px}
+.auth-or[hidden]{display:none}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.auth-body{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.auth-body[hidden]{display:none}
+.auth-body .device-qr{width:150px;height:150px;padding:8px;background:#fff;border-radius:6px;margin:0}
+.auth-body .device-qr svg{width:100%;height:100%;display:block}
+
+.device-code-row{display:flex;align-items:center;gap:10px;margin:0}
+.device-code{margin:0;font:800 27px/1 ui-monospace,SFMono-Regular,monospace;letter-spacing:.16em;color:#fff7e6;user-select:all}
+.iconbtn-copy{display:grid;place-items:center;width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:7px;background:#ffffff0c;color:var(--muted);cursor:pointer}
+.iconbtn-copy:hover{color:var(--gold);border-color:var(--gold)}
+.iconbtn-copy svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+
+.auth-hint{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5;max-width:42ch}
+
+.auth-panel .device-actions{justify-content:flex-end;margin-top:20px}
+
+/* A failed sign-in replaces the QR block instead of stacking under it. */
+.auth-error{margin-top:4px;padding:14px 16px;border:1px solid #ff8b8340;border-radius:11px;background:#ff5a501a;display:grid;gap:10px;justify-items:start}
+.auth-error[hidden]{display:none}
+.auth-error-text{margin:0;color:#ffb3ac;font-size:13.5px;line-height:1.5}
+.auth-error-details summary{color:#c29a96}
+.auth-error-details pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:#c8bcbb;max-height:120px;overflow:auto}
+
+@media(max-width:480px){.device-code{font-size:22px;letter-spacing:.12em}.auth-body .device-qr{width:124px;height:124px}}
+.auth-panel > .auth-hint{margin:12px 0;max-width:none;text-align:center}
+#auth-alternatives{margin-top:8px;font-size:13px;color:var(--muted)}
+#auth-alternatives > summary{cursor:pointer;padding:8px 0}
+#auth-alternatives .auth-body{padding:12px 0}
+
+/* Destructive action: neutral until it is armed, then unmistakably a warning.
+   The colour only appears on the second state so the button cannot be mistaken
+   for something safe once it is one click from wiping the installation. */
+.btn-danger.is-armed{background:#7a2020;border-color:#b74a4a;color:#ffe9e9}
+.btn-danger.is-armed:hover{background:#8f2626}
+
+/* Microsoft sign-in, laid out like Prism's account dialog: the button, a thin
+   "or", then the QR and the code together as one block. Everything is centred on
+   one axis so the eye goes button -> QR -> code without hunting. */
+.auth-panel{display:flex;flex-direction:column;align-items:center;text-align:center}
+.auth-panel>*{width:100%}
+.auth-or{display:flex;align-items:center;gap:12px;margin:16px 0 4px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.auth-or::before,.auth-or::after{content:'';flex:1;height:1px;background:var(--line)}
+.auth-body{display:flex;flex-direction:column;align-items:center;gap:2px}
+/* The QR must stay light whatever the theme: a scanner needs the quiet zone and
+   the contrast, and inverting it is the classic way to make one unreadable. */
+.device-qr{width:164px;height:164px;padding:10px;background:#fff;border-radius:10px;margin:14px 0 10px}
+.device-code-row{display:flex;align-items:center;justify-content:center;gap:10px}
+.device-code{margin:0;font:700 26px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:var(--gold)}
+.auth-panel .auth-hint{margin:12px 0 0;color:var(--muted);font-size:12.5px;line-height:1.5;max-width:340px}
+.auth-panel .device-actions{justify-content:center;margin-top:18px}

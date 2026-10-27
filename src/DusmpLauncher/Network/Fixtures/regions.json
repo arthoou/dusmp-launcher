@@ -1,0 +1,41 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. pingUrl points at the real AWS EC2 regional health endpoint for each region, which answers HEAD with 200 and a tiny body, so PingTester measures genuine round-trip latency instead of a made-up number. cdnBases is deliberately empty: modpack-manifest.json uses absolute urls, so nothing has to be rewritten. To exercise the out-of-rotation path, flip one region's \"available\" to false.",
+  "items": [
+    {
+      "id": "sa-east",
+      "name": "South America (São Paulo)",
+      "countries": ["BR", "AR", "UY", "PY", "BO", "CL", "PE", "CO", "EC", "VE", "GY", "SR"],
+      "cdnBases": [],
+      "pingUrl": "https://ec2.sa-east-1.amazonaws.com/ping",
+      "available": true,
+      "priority": 0
+    },
+    {
+      "id": "na-east",
+      "name": "North America (Virginia)",
+      "countries": ["US", "CA", "MX", "GT", "CR", "PA", "CU", "DO", "PR", "JM", "HT"],
+      "cdnBases": [],
+      "pingUrl": "https://ec2.us-east-1.amazonaws.com/ping",
+      "available": true,
+      "priority": 1
+    },
+    {
+      "id": "eu-west",
+      "name": "Europe (Ireland)",
+      "countries": ["IE", "GB", "PT", "ES", "FR", "DE", "NL", "BE", "IT", "PL", "SE", "NO", "DK", "FI", "CH", "AT", "CZ"],
+      "cdnBases": [],
+      "pingUrl": "https://ec2.eu-west-1.amazonaws.com/ping",
+      "available": true,
+      "priority": 2
+    },
+    {
+      "id": "ap-southeast",
+      "name": "Asia Pacific (Singapore)",
+      "countries": ["SG", "MY", "ID", "TH", "VN", "PH", "AU", "NZ", "JP", "KR", "IN", "HK", "TW"],
+      "cdnBases": [],
+      "pingUrl": "https://ec2.ap-southeast-1.amazonaws.com/ping",
+      "available": true,
+      "priority": 3
+    }
+  ]
+}

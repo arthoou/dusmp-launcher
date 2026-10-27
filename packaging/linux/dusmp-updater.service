@@ -1,0 +1,14 @@
+[Unit]
+Description=DUSMP background modpack updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/DusmpUpdater
+Restart=on-failure
+RestartSec=20
+Environment=DUSMP_UPDATER_POLL_MINUTES=30
+
+[Install]
+WantedBy=default.target

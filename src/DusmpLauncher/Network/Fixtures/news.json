@@ -1,0 +1,44 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. Bodies are deliberately different lengths so the news panel gets tested against both a one-liner and a paragraph that has to wrap or clamp. Titles and bodies come per language because the API owns this wording, not the translation tables.",
+  "items": [
+    {
+      "id": "2026-09-20-modpack-1-4-0",
+      "title": {
+        "en": "Modpack 1.4.0 is out",
+        "pt-BR": "Modpack 1.4.0 disponível"
+      },
+      "body": {
+        "en": "Entity Culling joins the optional list, and the performance set moves to Sodium 0.8.13 and Lithium 0.15.4. Nothing in your world changes — the update only touches launcher-managed files, so your saves, screenshots and resource packs are left exactly as they are.",
+        "pt-BR": "O Entity Culling entrou na lista de opcionais, e o conjunto de desempenho subiu para Sodium 0.8.13 e Lithium 0.15.4. Nada muda no seu mundo: a atualização só mexe nos arquivos gerenciados pelo launcher, então seus saves, screenshots e pacotes de recursos ficam exatamente como estão."
+      },
+      "url": "https://dusmp.online/news/modpack-1-4-0",
+      "publishedAt": "2026-09-20T18:00:00+00:00"
+    },
+    {
+      "id": "2026-09-12-voice-chat",
+      "title": {
+        "en": "Voice chat is now optional",
+        "pt-BR": "Chat de voz agora é opcional"
+      },
+      "body": {
+        "en": "Simple Voice Chat moved out of the required set. If you never used it, turn it off in the launcher and skip about 5 MB of download.",
+        "pt-BR": "O Simple Voice Chat saiu do conjunto obrigatório. Se você nunca usou, desligue no launcher e economize cerca de 5 MB de download."
+      },
+      "url": "https://dusmp.online/news/voice-chat-optional",
+      "publishedAt": "2026-09-12T21:30:00+00:00"
+    },
+    {
+      "id": "2026-09-03-regions",
+      "title": {
+        "en": "Downloads now pick the closest region",
+        "pt-BR": "Downloads agora escolhem a região mais próxima"
+      },
+      "body": {
+        "en": "The launcher measures a few regions on startup and downloads from whichever actually answers fastest, rather than trusting your country alone.",
+        "pt-BR": "O launcher mede algumas regiões ao iniciar e baixa daquela que realmente responde mais rápido, em vez de confiar apenas no seu país."
+      },
+      "url": "https://dusmp.online/news/region-selection",
+      "publishedAt": "2026-09-03T14:00:00+00:00"
+    }
+  ]
+}

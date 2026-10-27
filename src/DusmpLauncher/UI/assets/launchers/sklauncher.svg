@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="SKLauncher">
+  <!-- Original DUSMP monogram. SKLauncher's own logo is not redistributable, so this
+       identifies the launcher without reproducing its mark. -->
+  <defs>
+    <linearGradient id="sklauncher-f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4C97FF"/>
+      <stop offset="1" stop-color="#1C54B8"/>
+    </linearGradient>
+    <linearGradient id="sklauncher-s" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".30"/>
+      <stop offset=".55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#sklauncher-f)"/>
+  <rect width="48" height="48" rx="12" fill="url(#sklauncher-s)"/>
+  <rect x=".6" y=".6" width="46.8" height="46.8" rx="11.4" fill="none" stroke="#000" stroke-opacity=".28"/>
+  <text x="24" y="24" fill="#050B18" fill-opacity=".92" text-anchor="middle" dominant-baseline="central"
+        font-family="Inter, 'Segoe UI', system-ui, sans-serif" font-weight="800"
+        font-size="16" letter-spacing="-.4">SK</text>
+</svg>

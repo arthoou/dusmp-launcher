@@ -1,0 +1,8 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. version is kept at the launcher's own current version and mandatory is false, so a dev run never shows the update banner by accident; raise version to see the banner, and set mandatory true to see the hard block.",
+  "version": "1.0.0",
+  "minimumVersion": "1.0.0",
+  "downloadUrl": "https://dusmp.online/launcher",
+  "notesUrl": "https://dusmp.online/launcher/changelog",
+  "mandatory": false
+}

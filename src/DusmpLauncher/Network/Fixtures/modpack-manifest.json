@@ -1,0 +1,99 @@
+{
+  "_comment": "DEV FIXTURE - test phase only, not production config. Every url/size/sha256 below was downloaded and hashed by hand (Modrinth CDN + a pinned GitHub commit) so the launcher does real work with real progress while api.dusmp.online does not exist yet. Regenerate, do not hand-edit: a wrong sha256 makes every run fail verification.",
+  "version": "1.4.0",
+  "minecraft": "1.21.1",
+  "loader": "neoforge",
+  "loaderVersion": "21.1.252",
+  "releasedAt": "2026-09-20T18:00:00+00:00",
+  "server": {
+    "host": "play.dusmp.online",
+    "port": 25565
+  },
+  "java": {
+    "majorVersion": 21,
+    "recommendedMaxRamMb": 4096,
+    "extraJvmArgs": [
+      "-XX:+UseG1GC",
+      "-XX:MaxGCPauseMillis=50",
+      "-XX:+UnlockExperimentalVMOptions",
+      "-XX:G1NewSizePercent=20",
+      "-XX:G1ReservePercent=20",
+      "-XX:G1HeapRegionSize=32M"
+    ]
+  },
+  "files": [
+    {
+      "path": "mods/sodium-neoforge-0.8.13+mc1.21.1.jar",
+      "size": 1292934,
+      "sha256": "575d187b15328d7bddd8a9b1bee64333c22c14735f5780ec49eac0cd5503c08d",
+      "url": "https://cdn.modrinth.com/data/AANobbMI/versions/uMOpc5uV/sodium-neoforge-0.8.13%2Bmc1.21.1.jar"
+    },
+    {
+      "path": "mods/lithium-neoforge-0.15.4+mc1.21.1.jar",
+      "size": 774220,
+      "sha256": "488f33216030c1cb0baa33e59de3d657d08d5795a6c2080c8c8bbbc133fc8757",
+      "url": "https://cdn.modrinth.com/data/gvQqBUqZ/versions/DDUrRVCA/lithium-neoforge-0.15.4%2Bmc1.21.1.jar"
+    },
+    {
+      "path": "mods/ferritecore-7.0.3-neoforge.jar",
+      "size": 121559,
+      "sha256": "d87ea28262715ebff45b8a82d493e6b468e7a4521bc021df5d88302196d030a8",
+      "url": "https://cdn.modrinth.com/data/uXXizFIs/versions/x7kQWVju/ferritecore-7.0.3-neoforge.jar"
+    },
+    {
+      "path": "mods/modernfix-neoforge-5.27.24+mc1.21.1.jar",
+      "size": 604333,
+      "sha256": "e6e9446890f0feb3aab3f6e73ae18cb17575c370f232179fef7baa30e61538fe",
+      "url": "https://cdn.modrinth.com/data/nmDcB62a/versions/5HLHxQ2F/modernfix-neoforge-5.27.24%2Bmc1.21.1.jar"
+    },
+    {
+      "path": "mods/jei-1.21.1-neoforge-19.57.0.449.jar",
+      "size": 2252654,
+      "sha256": "1bdd4471bc232bfbd8d262876593a9a9ac85f2e4966adbfa4348795c47ecf63e",
+      "url": "https://cdn.modrinth.com/data/u6dRKJwZ/versions/TKsCmRlt/jei-1.21.1-neoforge-19.57.0.449.jar",
+      "optionalId": "jei"
+    },
+    {
+      "path": "mods/voicechat-neoforge-1.21.1-2.6.24.jar",
+      "size": 4934688,
+      "sha256": "7af3bbc34948cc0f833946fd4b0d2db7ed608f67a12702be4df6f731a4b66290",
+      "url": "https://cdn.modrinth.com/data/9eGKb6K1/versions/qqNx1Yjm/voicechat-neoforge-1.21.1-2.6.24.jar",
+      "optionalId": "simple-voice-chat"
+    },
+    {
+      "path": "mods/sodium-extra-neoforge-0.9.4+mc1.21.1.jar",
+      "size": 472060,
+      "sha256": "655b4a25d3d1ccc0f53d0589c676f0a86e46843ae537749048b4b0edc33a0f6f",
+      "url": "https://cdn.modrinth.com/data/PtjYWJkn/versions/ufpcXU9c/sodium-extra-neoforge-0.9.4%2Bmc1.21.1.jar",
+      "optionalId": "sodium-extra"
+    },
+    {
+      "path": "mods/entityculling-neoforge-1.11.2-mc1.21.1.jar",
+      "size": 1510018,
+      "sha256": "3983b981da4a0583c7e58184a8631a23e56cc3b81f4cb53491ca600382879b82",
+      "url": "https://cdn.modrinth.com/data/NNAgCjsB/versions/8w8FfUPs/entityculling-neoforge-1.11.2-mc1.21.1.jar",
+      "optionalId": "entityculling"
+    },
+    {
+      "path": "mods/cloth-config-15.0.140-neoforge.jar",
+      "size": 1163890,
+      "sha256": "65e722e0d98431a07c45f8bdd8d529a217cc8c175fde1740248bd5c1b4f3c0d4",
+      "url": "https://cdn.modrinth.com/data/9s6osm5g/versions/izKINKFg/cloth-config-15.0.140-neoforge.jar"
+    },
+    {
+      "path": "config/fml.toml",
+      "size": 887,
+      "sha256": "4941ea9e492b2549677ae9253f1717b7db6ac3bd151e59e31349d5423608dc56",
+      "url": "https://raw.githubusercontent.com/AllTheMods/ATM-9/255ca23b91cebbb57130074e0bf7b86c266ac2a6/config/fml.toml",
+      "writeOnce": true
+    },
+    {
+      "path": "config/jei/jei-client.ini",
+      "size": 4702,
+      "sha256": "eab3160fb9458ca161bfaef6446532b58ff5f8689cefa2f3f982a298d38d72f4",
+      "url": "https://raw.githubusercontent.com/AllTheMods/ATM-9/255ca23b91cebbb57130074e0bf7b86c266ac2a6/config/jei/jei-client.ini",
+      "optionalId": "jei",
+      "writeOnce": true
+    }
+  ]
+}

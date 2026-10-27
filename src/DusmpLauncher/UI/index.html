@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<!-- lang/dir are placeholders: i18n.js sets both from the host's language event,
+     which is the only thing that knows which table actually loaded. -->
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The document and its assets share app://launcher/ on both platforms. -->
+  <link rel="icon" href="app://launcher/assets/icon.png">
+  <link rel="stylesheet" href="app://launcher/css/loader.css">
+  <link rel="stylesheet" href="app://launcher/css/app.css">
+  <link rel="stylesheet" href="app://launcher/css/home.css">
+  <title>DUSMP</title>
+</head>
+<body>
+  <!-- Panorama lives in its own layer so screen switches never re-decode it. -->
+  <div class="app-bg" aria-hidden="true">
+    <img class="app-bg-image" src="app://launcher/assets/panorama.png" alt="">
+    <div class="app-bg-veil"></div>
+  </div>
+
+  <!-- Every screen is in the DOM from the first paint and switches by class, so
+       onboarding never flashes and never reloads the document. -->
+  <main id="screens">
+
+    <!-- 1. loading -->
+    <section class="screen screen-loading is-active" id="screen-loading" data-screen="loading">
+      <div class="loading-shell">
+        <img class="brand-logo" src="app://launcher/assets/logo.png" alt="" data-i18n-alt="app.logoAlt">
+        <div class="loader" aria-hidden="true"></div>
+        <p class="loading-stage" id="loading-stage" role="status" aria-live="polite"></p>
+        <div class="loading-bar" id="loading-bar-track" hidden>
+          <div class="loading-bar-fill" id="loading-bar-fill"></div>
+        </div>
+        <p class="loading-percent" id="loading-percent"></p>
+
+        <dl class="loading-meta">
+          <div class="loading-meta-item" id="loading-speed-item">
+            <dt data-i18n="loading.speedLabel"></dt>
+            <dd id="loading-speed"></dd>
+          </div>
+          <div class="loading-meta-item" id="loading-bytes-item">
+            <dt data-i18n="loading.bytesLabel"></dt>
+            <dd id="loading-bytes"></dd>
+          </div>
+
+        </dl>
+        <details class="loading-details">
+          <summary data-i18n="common.showDetails"></summary>
+          <p class="loading-file" id="loading-file" dir="ltr"></p>
+          <p id="loading-files"></p>
+        </details>
+      </div>
+    </section>
+
+    <!-- 2. onboarding-language -->
+    <section class="screen screen-picker" id="screen-onboarding-language" data-screen="onboarding-language">
+      <div class="panel panel-tall">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.language.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.language.subtitle"></p>
+        </header>
+        <div class="search-row">
+          <label class="sr-only" for="language-search" data-i18n="onboarding.language.searchLabel"></label>
+          <input type="search" id="language-search" class="search-input" autocomplete="off"
+                 spellcheck="false" data-i18n-placeholder="onboarding.language.searchPlaceholder">
+        </div>
+        <div class="picker-list" id="language-list"></div>
+        <p class="picker-empty" id="language-empty" data-i18n="onboarding.language.noResults" hidden></p>
+        <footer class="panel-foot">
+          <button type="button" class="btn btn-ghost nav-back" id="language-back" data-i18n="common.back" hidden></button>
+          <span class="panel-foot-spacer"></span>
+
+        </footer>
+      </div>
+    </section>
+
+    <!-- 3. onboarding-account -->
+    <!-- Which pack to install. Nothing is downloaded before this is answered,
+         so this step is what starts the install. -->
+    <section class="screen" id="screen-onboarding-edition" data-screen="onboarding-edition">
+      <div class="panel panel-narrow">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.edition.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.edition.subtitle"></p>
+        </header>
+        <div class="edition-grid" id="edition-grid"></div>
+        <p class="card-empty" id="edition-empty" data-i18n="onboarding.edition.empty" hidden></p>
+        <div class="panel-foot">
+          <button type="button" class="btn btn-ghost" id="edition-back" data-i18n="common.back"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen screen-account" id="screen-onboarding-account" data-screen="onboarding-account">
+      <div class="panel">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.account.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.account.subtitle"></p>
+        </header>
+
+        <div class="account-cards" id="account-cards">
+          <article class="account-card account-card-primary">
+            <div class="account-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3 3h8.5v8.5H3zM12.5 3H21v8.5h-8.5zM3 12.5h8.5V21H3zM12.5 12.5H21V21h-8.5z"/></svg>
+            </div>
+            <h2 class="account-card-title" data-i18n="onboarding.account.microsoft.title"></h2>
+            <p class="account-card-desc" data-i18n="onboarding.account.microsoft.description"></p>
+            <button type="button" class="btn btn-primary btn-block" id="btn-login-microsoft"
+                    data-i18n="onboarding.account.microsoft.action"></button>
+          </article>
+          <article class="account-card">
+            <div class="account-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c.6-3.8 3.7-6 7.5-6s6.9 2.2 7.5 6"/>
+              </svg>
+            </div>
+            <h2 class="account-card-title" data-i18n="onboarding.account.offline.title"></h2>
+            <p class="account-card-desc" data-i18n="onboarding.account.offline.description"></p>
+            <button type="button" class="btn btn-ghost btn-block" id="btn-offline-open"
+                    data-i18n="onboarding.account.offline.action"></button>
+          </article>
+        </div>
+
+        <!-- Microsoft sign-in, deliberately plain: a button, the code, one line
+             of instruction. No step lists, no timers, no status chatter. -->
+        <section class="subpanel auth-panel" id="device-panel" hidden aria-live="polite">
+          <button type="button" class="btn btn-primary btn-block" id="btn-open-verify"></button>
+
+          <!-- The code and QR are shown outright rather than folded into a
+               disclosure: whichever route the player takes, they need to see one
+               of them, and hiding both behind a summary made the window look
+               like it was waiting for nothing. -->
+          <p class="auth-or" id="auth-or" hidden><span data-i18n="onboarding.account.device.or"></span></p>
+          <div class="auth-body" id="auth-body" hidden>
+            <div id="device-qr" class="device-qr" hidden></div>
+            <div class="device-code-row" id="device-code-block" hidden>
+              <p class="device-code" id="device-code" dir="ltr" tabindex="0" data-i18n-aria-label="onboarding.account.device.codeLabel"></p>
+              <button type="button" class="iconbtn-copy" id="btn-copy-code" data-i18n-aria-label="common.copy">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="9" width="10" height="10" rx="2"/><path d="M5 15V7a2 2 0 0 1 2-2h8"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="auth-hint" id="device-instructions"></p>
+
+          <div class="auth-error" id="auth-error" hidden>
+            <p class="auth-error-text" id="auth-error-text" role="alert"></p>
+            <details class="auth-error-details" id="auth-error-details" hidden>
+              <summary data-i18n="error.detailsToggle"></summary>
+              <pre id="auth-error-detail" dir="ltr"></pre>
+            </details>
+            <button type="button" class="btn btn-primary btn-small" id="btn-auth-retry" data-i18n="error.retry"></button>
+          </div>
+
+          <div class="device-actions">
+            <button type="button" class="btn btn-ghost" id="btn-device-fallback" data-i18n="onboarding.account.browser.fallback" hidden></button>
+            <button type="button" class="btn btn-ghost" id="btn-cancel-device" data-i18n="common.cancel"></button>
+          </div>
+
+          <!-- Kept for the host contract; not shown in this layout. -->
+          <a id="device-link" href="#" hidden></a>
+          <p id="device-status" hidden></p>
+          <p id="device-timer" hidden></p>
+        </section>
+
+        <section class="subpanel" id="offline-panel" hidden>
+          <h2 class="subpanel-title" data-i18n="onboarding.account.offline.formTitle"></h2>
+          <div class="field">
+            <label class="field-label" for="offline-username" data-i18n="onboarding.account.offline.usernameLabel"></label>
+            <input type="text" id="offline-username" class="text-input" autocomplete="off" spellcheck="false"
+                   maxlength="16" dir="ltr" aria-describedby="offline-error"
+                   data-i18n-placeholder="onboarding.account.offline.usernamePlaceholder">
+            <p class="field-error" id="offline-error" role="status" aria-live="polite"></p>
+          </div>
+          <div class="device-actions">
+            <button type="button" class="btn btn-primary" id="btn-offline-continue" data-i18n="common.continue" disabled></button>
+            <button type="button" class="btn btn-ghost" id="btn-offline-cancel" data-i18n="common.cancel"></button>
+          </div>
+        </section>
+
+        <footer class="panel-foot">
+          <button type="button" class="btn btn-ghost nav-back" id="account-back" data-i18n="common.back"></button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Play target: this choice is stored separately from the account. -->
+    <section class="screen screen-account" id="screen-onboarding-play-mode" data-screen="onboarding-play-mode">
+      <div class="panel panel-narrow">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.playMode.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.playMode.subtitle"></p>
+        </header>
+        <div class="account-grid">
+          <article class="account-card">
+            <h2 class="account-card-title" data-i18n="onboarding.playMode.official.title"></h2>
+            <p class="account-card-desc" data-i18n="onboarding.playMode.official.description"></p>
+            <button type="button" class="btn btn-primary btn-block" id="playmode-dusmp" data-i18n="onboarding.playMode.official.action"></button>
+          </article>
+          <article class="account-card">
+            <h2 class="account-card-title" data-i18n="onboarding.playMode.external.title"></h2>
+            <p class="account-card-desc" data-i18n="onboarding.playMode.external.description"></p>
+            <button type="button" class="btn btn-ghost btn-block" id="playmode-external" data-i18n="onboarding.playMode.external.action"></button>
+          </article>
+        </div>
+        <footer class="panel-foot"><button class="btn btn-ghost" id="playmode-back" data-i18n="common.back"></button></footer>
+      </div>
+    </section>
+
+    <section class="screen screen-picker" id="screen-onboarding-external-launcher" data-screen="onboarding-external-launcher">
+      <div class="panel panel-tall">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.external.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.external.subtitle"></p>
+        </header>
+        <div id="launcher-list" class="launcher-list"></div>
+        <footer class="panel-foot">
+          <button type="button" class="btn btn-ghost" id="external-back" data-i18n="common.back"></button>
+          <span class="panel-foot-spacer"></span>
+          <p class="field-hint" data-i18n="onboarding.external.adapterNote"></p>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 4. onboarding-country -->
+    <section class="screen screen-picker" id="screen-onboarding-country" data-screen="onboarding-country">
+      <div class="panel panel-tall">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.country.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.country.subtitle"></p>
+        </header>
+        <div class="search-row">
+          <label class="sr-only" for="country-search" data-i18n="onboarding.country.searchLabel"></label>
+          <input type="search" id="country-search" class="search-input" autocomplete="off"
+                 spellcheck="false" data-i18n-placeholder="onboarding.country.searchPlaceholder">
+        </div>
+        <div class="picker-list" id="country-list"></div>
+        <p class="picker-empty" id="country-empty" data-i18n="onboarding.country.noResults" hidden></p>
+        <footer class="panel-foot">
+          <button type="button" class="btn btn-ghost nav-back" id="country-back" data-i18n="common.back"></button>
+          <span class="panel-foot-spacer"></span>
+
+        </footer>
+      </div>
+    </section>
+
+    <!-- 5. onboarding-optional-mods -->
+    <section class="screen screen-mods" id="screen-onboarding-optional-mods" data-screen="onboarding-optional-mods">
+      <div class="panel panel-tall">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="onboarding.optionalMods.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.optionalMods.explanation"></p>
+        </header>
+        <div class="mods-list" id="mods-list"></div>
+        <p class="picker-empty" id="mods-empty" data-i18n="onboarding.optionalMods.none" hidden></p>
+        <footer class="panel-foot">
+          <button type="button" class="btn btn-ghost nav-back" id="mods-back" data-i18n="common.back"></button>
+          <span class="mods-total" id="mods-total"></span>
+          <button type="button" class="btn btn-primary" id="mods-continue" data-i18n="onboarding.optionalMods.action"></button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 6. main (home) -->
+    <section class="screen screen-main" id="screen-main" data-screen="main">
+      <div class="home">
+        <!-- Its own layer so switching screens never re-decodes the artwork. -->
+        <div class="home-art" aria-hidden="true"></div>
+        <div class="home-scrim" aria-hidden="true"></div>
+
+        <header class="home-top">
+          <img class="home-logo" src="app://launcher/assets/logo.png" alt="" data-i18n-alt="app.logoAlt">
+          <div class="home-top-right">
+            <!-- Server status is intentionally not shown on the home screen.
+                 These stay because renderServers() writes into them. -->
+            <ul class="server-list" id="server-list" hidden></ul>
+            <p class="card-empty" id="server-empty" data-i18n="main.servers.unknown" hidden></p>
+
+            <div class="player-chip-wrap" id="player-chip-wrap">
+              <button type="button" class="player-chip" id="main-player" data-i18n-aria-label="profile.open">
+                <span class="player-avatar" id="main-avatar" aria-hidden="true"></span>
+                <span class="player-text">
+                  <span class="player-name" id="main-username" dir="ltr"></span>
+                  <span class="player-kind" id="main-account-kind"></span>
+                </span>
+              </button>
+
+              <button type="button" class="chip-caret" id="btn-accounts" aria-expanded="false"
+                      aria-controls="account-drawer" data-i18n-aria-label="accounts.open">
+                <!-- caret-up-fill from Bootstrap Icons (MIT) — see assets/ATTRIBUTION.md -->
+                <svg class="caret" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                </svg>
+              </button>
+
+              <div class="account-drawer" id="account-drawer" hidden>
+                <p class="drawer-title" data-i18n="accounts.title"></p>
+                <ul class="account-list" id="account-list"></ul>
+                <p class="drawer-hint" data-i18n="accounts.hint"></p>
+                <button type="button" class="drawer-add" id="btn-add-account" data-i18n="accounts.add"></button>
+              </div>
+            </div>
+
+            <button type="button" class="iconbtn" id="btn-folder" data-i18n-aria-label="main.openFolder">
+              <!-- folder-fill from Bootstrap Icons (MIT) — see assets/ATTRIBUTION.md -->
+              <svg class="gear folder" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/>
+              </svg>
+            </button>
+
+            <button type="button" class="iconbtn" id="btn-settings" data-i18n-aria-label="main.settings">
+              <!-- gear-fill from Bootstrap Icons (MIT) — see assets/ATTRIBUTION.md -->
+              <svg class="gear" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Right-clicking an account in the drawer opens this at the cursor. -->
+        <div class="ctx-menu" id="account-menu" hidden>
+          <button type="button" class="ctx-item" data-account-action="select" data-i18n="accounts.select"></button>
+          <button type="button" class="ctx-item" data-account-action="customize" data-i18n="accounts.customize"></button>
+          <button type="button" class="ctx-item ctx-danger" data-account-action="remove" data-i18n="accounts.remove"></button>
+        </div>
+
+        <div class="home-banners">
+          <div class="banner banner-update" id="launcher-update" hidden>
+            <p class="banner-text" id="launcher-update-text"></p>
+            <button type="button" class="btn btn-small btn-primary" id="btn-launcher-update"
+                    data-i18n="main.launcherUpdate.action"></button>
+          </div>
+          <div class="banner banner-maintenance" id="maintenance-banner" hidden>
+            <p class="banner-text" id="maintenance-text"></p>
+          </div>
+        </div>
+
+        <!-- Bottom-anchored stack: headline, the action, then news, then the
+             quiet version facts. News sits above the versions and after PLAY,
+             so it can never crowd the primary action. -->
+        <div class="home-body">
+          <div class="home-hero">
+            <p class="home-eyebrow" data-i18n="main.project"></p>
+            <h1 id="main-ready-title" data-i18n="main.ready.title"></h1>
+            <p id="main-ready-description" data-i18n="main.ready.description"></p>
+          </div>
+
+          <!-- Switching packs here is the same operation as choosing one in the
+               setup: it installs the other edition into its own folder. -->
+          <div class="edition-switch" id="edition-switch" hidden role="group" data-i18n-aria-label="onboarding.edition.title"></div>
+
+          <div class="home-play">
+            <button type="button" class="btn btn-play" id="btn-play"></button>
+            <div class="play-bar" id="play-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" hidden>
+              <div class="play-bar-fill" id="play-bar-fill"></div>
+            </div>
+            <p class="play-sub" id="play-sub" role="status" aria-live="polite"></p>
+          </div>
+
+          <aside class="home-rail" id="news-section">
+            <h2 class="card-title" data-i18n="main.news.title"></h2>
+            <ul class="news-list" id="news-list"></ul>
+            <p class="card-empty" id="news-empty" data-i18n="main.news.empty" hidden></p>
+          </aside>
+
+          <dl class="home-meta">
+            <div><dt data-i18n="main.status.minecraft"></dt><dd id="main-minecraft-version"></dd></div>
+            <div><dt data-i18n="main.status.modpack"></dt><dd id="main-installed-version"></dd></div>
+            <div class="installation-path"><dt data-i18n="main.status.path"></dt><dd id="main-installation-path" dir="ltr"></dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. settings -->
+    <section class="screen screen-settings" id="screen-settings" data-screen="settings">
+      <div class="panel panel-tall">
+        <header class="panel-head panel-head-row">
+          <h1 class="panel-title" data-i18n="settings.title"></h1>
+          <button type="button" class="btn btn-ghost btn-small" id="settings-back" data-i18n="common.back"></button>
+        </header>
+
+        <div class="settings-scroll">
+          <section class="settings-group">
+            <h2 class="settings-group-title" data-i18n="settings.group.choices"></h2>
+            <div class="setting-row">
+              <span class="setting-label" data-i18n="settings.language"></span>
+              <span class="setting-value" id="settings-language-value"></span>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-language-btn" data-i18n="settings.change"></button>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label" data-i18n="settings.country"></span>
+              <span class="setting-value" id="settings-country-value"></span>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-country-btn" data-i18n="settings.change"></button>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label" data-i18n="settings.launcher"></span>
+              <span class="setting-value" id="settings-launcher-value"></span>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-launcher-btn" data-i18n="settings.change"></button>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label" data-i18n="settings.account"></span>
+              <span class="setting-value" id="settings-account-value" dir="ltr"></span>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-account-btn" data-i18n="settings.change"></button>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-logout-btn" data-i18n="settings.signOut"></button>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label" data-i18n="settings.optionalMods"></span>
+              <span class="setting-value" id="settings-mods-value"></span>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-mods-btn" data-i18n="settings.change"></button>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h2 class="settings-group-title" data-i18n="settings.group.game"></h2>
+            <div class="field field-inline">
+              <label class="field-label" for="set-ram" data-i18n="settings.ram"></label>
+              <input type="range" id="set-ram" min="1024" max="16384" step="512" value="4096">
+              <output class="field-output" id="set-ram-value" for="set-ram"></output>
+            </div>
+            <p class="field-hint" id="set-ram-hint" data-i18n="settings.ramHint"></p>
+
+            <div class="field">
+              <label class="field-label" for="set-java-path" data-i18n="settings.javaPath"></label>
+              <input type="text" id="set-java-path" class="text-input" dir="ltr" spellcheck="false"
+                     data-i18n-placeholder="settings.javaPathPlaceholder">
+              <p class="field-hint" data-i18n="settings.javaPathHint"></p>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="set-jvm-args" data-i18n="settings.jvmArgs"></label>
+              <input type="text" id="set-jvm-args" class="text-input" dir="ltr" spellcheck="false"
+                     data-i18n-placeholder="settings.jvmArgsPlaceholder">
+            </div>
+
+            <div class="field field-inline">
+              <span class="field-label" data-i18n="settings.resolution"></span>
+              <label class="sr-only" for="set-width" data-i18n="settings.width"></label>
+              <input type="number" id="set-width" class="text-input text-input-narrow" min="640" max="7680" step="1">
+              <span class="field-sep" aria-hidden="true">&times;</span>
+              <label class="sr-only" for="set-height" data-i18n="settings.height"></label>
+              <input type="number" id="set-height" class="text-input text-input-narrow" min="480" max="4320" step="1">
+            </div>
+
+            <div class="check-row">
+              <input type="checkbox" id="set-fullscreen">
+              <label for="set-fullscreen" data-i18n="settings.fullscreen"></label>
+            </div>
+            <div class="check-row">
+              <input type="checkbox" id="set-close-on-launch">
+              <label for="set-close-on-launch" data-i18n="settings.closeOnLaunch"></label>
+            </div>
+            <div class="check-row">
+              <input type="checkbox" id="set-auto-join">
+              <label for="set-auto-join" data-i18n="settings.autoJoin"></label>
+            </div>
+          </section>
+
+          <details class="settings-group advanced-settings">
+            <summary class="settings-group-title" data-i18n="settings.group.advanced"></summary>
+            <div class="field field-inline">
+              <label class="field-label" for="set-concurrency" data-i18n="settings.concurrency"></label>
+              <input type="range" id="set-concurrency" min="1" max="16" step="1" value="6">
+              <output class="field-output" id="set-concurrency-value" for="set-concurrency"></output>
+            </div>
+            <p class="field-hint" data-i18n="settings.concurrencyHint"></p>
+            <div class="settings-actions">
+              <button type="button" class="btn btn-ghost" id="btn-repair" data-i18n="settings.repair"></button>
+              <button type="button" class="btn btn-ghost btn-danger" id="btn-reset" data-i18n="settings.reset"></button>
+              <button type="button" class="btn btn-ghost" id="btn-open-folder" data-i18n="settings.openFolder"></button>
+            </div>
+            <p class="field-hint" data-i18n="settings.repairHint"></p>
+            <p class="field-hint" data-i18n="settings.resetHint"></p>
+            <dl class="kv kv-compact">
+              <div class="kv-row">
+                <dt data-i18n="settings.launcherVersion"></dt>
+                <dd id="settings-launcher-version" dir="ltr"></dd>
+              </div>
+              <div class="kv-row" id="settings-fixtures-row" hidden>
+                <dt data-i18n="settings.dataSource"></dt>
+                <dd data-i18n="settings.dataSourceFixtures"></dd>
+              </div>
+            </dl>
+          </details>
+        </div>
+
+        <footer class="panel-foot">
+          <span class="panel-foot-spacer"></span>
+          <button type="button" class="btn btn-primary" id="btn-save-settings" data-i18n="settings.save"></button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 8. error -->
+    <section class="screen screen-error" id="screen-error" data-screen="error">
+      <div class="panel panel-narrow">
+        <img class="brand-logo brand-logo-small" src="app://launcher/assets/logo.png" alt="" data-i18n-alt="app.logoAlt">
+        <h1 class="panel-title" data-i18n="error.title"></h1>
+        <p class="error-message" id="error-message" role="alert"></p>
+        <details class="error-details">
+          <summary data-i18n="error.detailsToggle"></summary>
+          <pre class="error-detail" id="error-detail" dir="ltr"></pre>
+        </details>
+        <div class="settings-actions">
+          <button type="button" class="btn btn-primary" id="btn-retry" data-i18n="error.retry"></button>
+          <!-- A failed start used to be a dead end: settings were unreachable, so
+               the language could not be changed once the launcher errored. -->
+          <button type="button" class="btn btn-ghost" id="btn-error-settings" data-i18n="main.settings"></button>
+          <button type="button" class="btn btn-ghost" id="btn-error-close" data-i18n="error.quit"></button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script defer src="app://launcher/js/vendor/qrcode.js"></script>
+  <script defer src="app://launcher/js/app.js"></script>
+</body>
+</html>

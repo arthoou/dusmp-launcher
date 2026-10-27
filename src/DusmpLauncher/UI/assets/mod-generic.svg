@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-hidden="true">
+  <!-- Neutral placeholder for a mod whose own icon could not be resolved.
+       Original artwork: a plain crate, deliberately not any project's mark. -->
+  <rect width="48" height="48" rx="11" fill="#191c22"/>
+  <g fill="none" stroke="#7d8490" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M24 12 34.5 17.6v12.8L24 36 13.5 30.4V17.6z"/>
+    <path d="M13.9 17.8 24 23.2l10.1-5.4M24 23.4V35.6"/>
+  </g>
+</svg>

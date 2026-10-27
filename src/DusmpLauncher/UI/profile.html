@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DUSMP</title>
+  <link rel="stylesheet" href="app://launcher/css/app.css">
+  <link rel="stylesheet" href="app://launcher/css/profile.css">
+</head>
+<body class="skin-window">
+  <main class="screen-profile" id="screen-profile">
+      <div class="panel panel-tall">
+        <header class="panel-head">
+          <h1 class="panel-title" data-i18n="profile.title"></h1>
+          <p class="panel-sub" data-i18n="profile.subtitle"></p>
+        </header>
+
+        <div class="profile-layout">
+          <div class="profile-stage" id="profile-stage">
+            <div class="profile-scene">
+              <div id="player-model" class="player-model">
+                <div id="cape-model" class="part cape-model" hidden></div>
+              </div>
+            </div>
+            <button type="button" class="profile-play" id="btn-model-play" data-i18n-aria-label="profile.animation">
+              <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>
+              <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8a1 1 0 0 0 1.53.85l10.1-6.4a1 1 0 0 0 0-1.7L9.53 4.75A1 1 0 0 0 8 5.6z"/></svg>
+            </button>
+          </div>
+
+          <div class="profile-side">
+            <div class="profile-identity">
+              <strong id="profile-name" dir="ltr"></strong>
+              <span id="profile-kind"></span>
+            </div>
+
+            <div class="profile-block">
+              <h2 class="profile-block-title" data-i18n="profile.model"></h2>
+              <div class="model-switch" role="group" data-i18n-aria-label="profile.model">
+                <button type="button" id="btn-model-classic" data-i18n="profile.model.classic"></button>
+                <button type="button" id="btn-model-slim" data-i18n="profile.model.slim"></button>
+              </div>
+            </div>
+
+            <div class="profile-block">
+              <h2 class="profile-block-title" data-i18n="profile.skin"></h2>
+              <div class="skin-list" id="skin-list"></div>
+              <div class="settings-actions">
+                <button type="button" class="btn btn-primary btn-small" id="btn-skin-choose" data-i18n="profile.choose"></button>
+                <button type="button" class="btn btn-ghost btn-small" id="btn-skin-reset" data-i18n="profile.reset"></button>
+              </div>
+            </div>
+
+            <div class="profile-block" id="cape-block" hidden>
+              <h2 class="profile-block-title" data-i18n="profile.capes"></h2>
+              <div class="cape-list" id="cape-list"></div>
+            </div>
+
+            <p class="field-error" id="profile-error" role="alert"></p>
+            <p class="field-hint" id="profile-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+  </main>
+  <script defer src="app://launcher/js/profile.js"></script>
+</body>
+</html>
