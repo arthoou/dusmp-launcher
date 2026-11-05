@@ -454,7 +454,15 @@
   padding: 0 0 3px;
   font-size: 11.5px;
   min-width: 0;
+  /* Hugs the right edge for the same reason as the pill above: left-aligned in
+     a column that grows, it ended up stranded in the middle of the artwork with
+     everything else pushed to the corners. */
+  justify-self: end;
+  max-width: 100%;
 }
+
+/* Right-aligned block, so the rows read inwards from that edge. */
+.home-meta > div { justify-content: end; }
 
 .home-meta > div {
   display: flex;
@@ -862,7 +870,16 @@
   background: #0b0d12a8;
   border: 1px solid #ffffff14;
   backdrop-filter: blur(10px);
-  align-self: flex-start;
+  /* The home screen is a grid, and a cell stretches its contents: the pill came
+     out as a bar running most of the width with its two buttons huddled at one
+     end. It is only ever as wide as the names it holds. */
+  width: max-content;
+  max-width: 100%;
+  /* Follows the edge of the window rather than sitting at a fixed distance from
+     it: on a wide screen a centred pill leaves a lane of empty artwork on both
+     sides and reads as floating. */
+  justify-self: end;
+  align-self: start;
 }
 
 .edition-switch button {

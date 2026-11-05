@@ -30,14 +30,25 @@ namespace DusmpLauncher.Network;
 public sealed class ExternalMirrorResolver
 {
     /// <summary>
-    /// Optional CurseForge API key. CurseForge answers 401 without one, so the
-    /// lookup is skipped entirely when it is unset — the normal case, and not an
-    /// error: Modrinth alone already covers most of a pack.
+    /// Overrides the bundled CurseForge API key. An explicitly blank key
+    /// disables CurseForge lookups.
     /// </summary>
-    public const string CurseForgeApiKeyVariable = "DUSMP_CURSEFORGE_API_KEY";
+    public const string CurseForgeApiKeyVariable = "CURSEFORGE_API_KEY";
+
+    /// <summary>The name this was read from before; still honoured so an existing setup keeps working.</summary>
+    public const string LegacyCurseForgeApiKeyVariable = "DUSMP_CURSEFORGE_API_KEY";
+
+    /// <summary>
+    /// Optional Modrinth token. The endpoints used here are public and work
+    /// without one, so this exists only for an operator who wants their traffic
+    /// attributed to their account. It is read from the environment and never
+    /// written anywhere.
+    /// </summary>
+    public const string ModrinthTokenVariable = "MODRINTH_TOKEN";
 
     private const string ModrinthVersionFilesUrl = "https://api.modrinth.com/v2/version_files";
     private const string CurseForgeFingerprintsUrl = "https://api.curseforge.com/v1/fingerprints";
+    private const string DefaultCurseForgeApiKey = "$2a$10$/i2EevvGr8iKzwBykzM5ne4HAZOsKNMG4puk/a4uFBRskxUVDAL3.";
 
     /// <summary>Modrinth's algorithm selector. It publishes sha1 and sha512 only.</summary>
     private const string Sha1Algorithm = "sha1";
@@ -67,23 +78,45 @@ public sealed class ExternalMirrorResolver
     private readonly HttpClient _http;
     private readonly TimeSpan _budget;
     private readonly string? _curseForgeApiKey;
+    private readonly string? _modrinthToken;
+
+    /// <summary>
+    /// Set when a host asks us to back off, which stops this run from asking it
+    /// anything else. Hammering an API that just returned 429 is how a launcher
+    /// earns a longer ban than the one it was given.
+    /// </summary>
+    private bool _modrinthThrottled;
+    private bool _curseForgeThrottled;
+
+    /// <summary>
+    /// Why a lookup was refused, reported once per kind so a misconfigured key
+    /// is visible to whoever set it instead of looking like "no mirrors found"
+    /// forever. Never carries the key itself.
+    /// </summary>
+    private readonly HashSet<string> _reported = new(StringComparer.Ordinal);
 
     /// <param name="http">Shared client, never disposed here — the launcher owns its lifetime.</param>
     /// <param name="budget">Overrides <see cref="DefaultBudget"/>, mainly for tests.</param>
     /// <param name="curseForgeApiKey">
-    /// Explicit key, or null to read <see cref="CurseForgeApiKeyVariable"/> from
-    /// the environment.
+    /// Explicit key, or null to read the environment before using the bundled
+    /// key. An explicitly blank value disables CurseForge lookups.
     /// </param>
     public ExternalMirrorResolver(HttpClient http, TimeSpan? budget = null, string? curseForgeApiKey = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _budget = budget is { } value && value > TimeSpan.Zero ? value : DefaultBudget;
 
-        var key = curseForgeApiKey ?? Environment.GetEnvironmentVariable(CurseForgeApiKeyVariable);
+        var key = curseForgeApiKey
+            ?? Environment.GetEnvironmentVariable(CurseForgeApiKeyVariable)
+            ?? Environment.GetEnvironmentVariable(LegacyCurseForgeApiKeyVariable)
+            ?? DefaultCurseForgeApiKey;
         _curseForgeApiKey = string.IsNullOrWhiteSpace(key) ? null : key.Trim();
+
+        var token = Environment.GetEnvironmentVariable(ModrinthTokenVariable);
+        _modrinthToken = string.IsNullOrWhiteSpace(token) ? null : token.Trim();
     }
 
-    /// <summary>True when a CurseForge key is configured; false is the normal case.</summary>
+    /// <summary>True unless CurseForge lookups were explicitly disabled with a blank key.</summary>
     public bool CurseForgeEnabled => _curseForgeApiKey is not null;
 
     /// <summary>
@@ -134,6 +167,9 @@ public sealed class ExternalMirrorResolver
     private async Task ResolveFromModrinthAsync(
         IReadOnlyList<ModFile> files, Dictionary<string, List<string>> into, CancellationToken ct)
     {
+        if (_modrinthThrottled || ct.IsCancellationRequested)
+            return;
+
         // Several manifest entries can legitimately share a hash (the same jar
         // installed under two paths), so a hash maps to a list of owners.
         var byHash = new Dictionary<string, List<ModFile>>(StringComparer.OrdinalIgnoreCase);
@@ -190,14 +226,13 @@ public sealed class ExternalMirrorResolver
     }
 
     /// <summary>
-    /// Fingerprint lookup, only when a key is configured. CurseForge requires one
-    /// and returns 401 without it, so an unconfigured launcher skips this
-    /// silently instead of spending budget on a guaranteed rejection.
+    /// Fingerprint lookup for files not found on Modrinth. Uses the bundled key
+    /// unless overridden, and skips requests when a blank key disables it.
     /// </summary>
     private async Task ResolveFromCurseForgeAsync(
         IReadOnlyList<ModFile> files, Dictionary<string, List<string>> into, CancellationToken ct)
     {
-        if (_curseForgeApiKey is null || ct.IsCancellationRequested)
+        if (_curseForgeApiKey is null || _curseForgeThrottled || ct.IsCancellationRequested)
             return;
 
         var byFingerprint = new Dictionary<long, List<ModFile>>();
@@ -288,6 +323,8 @@ public sealed class ExternalMirrorResolver
             // anonymous launcher is the kind that gets blocked as a scraper.
             request.Headers.UserAgent.ParseAdd(UserAgent);
             request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            if (_modrinthToken is not null && url.StartsWith(ModrinthVersionFilesUrl, StringComparison.Ordinal))
+                request.Headers.TryAddWithoutValidation("Authorization", _modrinthToken);
             addHeaders?.Invoke(request.Headers);
 
             using var response = await _http
@@ -295,7 +332,10 @@ public sealed class ExternalMirrorResolver
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
+            {
+                Diagnose(url, response);
                 return null;
+            }
 
             return await response.Content.ReadFromJsonAsync<T>(JsonOptions, ct).ConfigureAwait(false);
         }
@@ -306,6 +346,42 @@ public sealed class ExternalMirrorResolver
             // on the player's screen, and none of them may stop the install.
             return null;
         }
+    }
+
+    /// <summary>
+    /// Says what a refusal actually was.
+    ///
+    /// Every failure used to collapse into "no mirror for this file", so a key
+    /// that was wrong, expired or missing the right permission looked exactly
+    /// like a pack whose mods are not on CurseForge — and nobody could tell.
+    /// These go to the launcher's own error stream, once per kind per run, and
+    /// never contain the key.
+    /// </summary>
+    private void Diagnose(string url, HttpResponseMessage response)
+    {
+        var host = new Uri(url).Host;
+        var status = (int)response.StatusCode;
+
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+            // Honour the brake rather than keep pulling: the rest of this run
+            // falls back to the DUSMP mirror, which always has every file.
+            if (host.Contains("curseforge", StringComparison.OrdinalIgnoreCase)) _curseForgeThrottled = true;
+            else _modrinthThrottled = true;
+        }
+
+        var reason = status switch
+        {
+            401 => "the API key was not accepted",
+            403 => "the API key is valid but not allowed to do this",
+            404 => "the endpoint does not exist",
+            429 => $"rate limited; backing off for the rest of this run (retry-after: {response.Headers.RetryAfter?.ToString() ?? "unset"})",
+            >= 500 => "the service is having trouble",
+            _ => "unexpected status",
+        };
+
+        if (_reported.Add($"{host}:{status}"))
+            Console.Error.WriteLine($"mirror lookup refused by {host}: HTTP {status} — {reason}.");
     }
 
     /// <summary>

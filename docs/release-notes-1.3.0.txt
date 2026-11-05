@@ -1,0 +1,5 @@
+Distribuição oficial para Windows x64 e Linux x64 integrada ao site DUSMP.
+
+Atualização automática antes da interface principal, com manifesto assinado, verificação de tamanho e SHA-256, retomada de downloads e proteção contra atualizações simultâneas. O launcher mantém a versão anterior e a restaura se a versão nova não conseguir iniciar.
+
+Inclui os perfis low 8gb, low 16gb e Standard 16gb+, além da configuração atualizada de acesso ao CurseForge. Contas, configurações e dados dos modpacks são preservados.

@@ -24,6 +24,8 @@ public sealed record LauncherState
 
     public bool FirstLaunch { get; init; } = true;
 
+    public string? JvmPreset { get; init; }
+
     /// <summary>Active UI language tag.</summary>
     public string Language { get; init; } = "en-US";
 
@@ -83,4 +85,5 @@ public sealed record LauncherState
     /// <summary>Set only when startup failed outright; the UI shows the error screen.</summary>
     public string? FatalErrorKey { get; init; }
     public string? FatalErrorDetail { get; init; }
+    public bool LauncherUpdatePending { get; init; }
 }

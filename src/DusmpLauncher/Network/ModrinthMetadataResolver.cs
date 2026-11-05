@@ -159,6 +159,15 @@ public sealed class ModrinthMetadataResolver
             request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
 
             using var response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                // Asked to back off. Carrying on through the remaining
+                // batches is what turns a short rate limit into a long one,
+                // and the icons this fetches are cosmetic: they can wait for
+                // the next start.
+                Console.Error.WriteLine("modrinth rate limited; skipping the rest of the icon lookup this run.");
+                break;
+            }
             if (!response.IsSuccessStatusCode) continue;
 
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -187,6 +196,15 @@ public sealed class ModrinthMetadataResolver
             request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
 
             using var response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                // Asked to back off. Carrying on through the remaining
+                // batches is what turns a short rate limit into a long one,
+                // and the icons this fetches are cosmetic: they can wait for
+                // the next start.
+                Console.Error.WriteLine("modrinth rate limited; skipping the rest of the icon lookup this run.");
+                break;
+            }
             if (!response.IsSuccessStatusCode) continue;
 
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);

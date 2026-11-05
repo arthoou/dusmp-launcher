@@ -1,6 +1,7 @@
 using DusmpLauncher.Core;
 using DusmpLauncher.Localization;
 using Photino.NET;
+using System.Runtime.InteropServices;
 
 namespace DusmpLauncher.Bridge;
 
@@ -27,6 +28,10 @@ public sealed class UiHost
 
     public WebBridge Bridge =>
         _bridge ?? throw new InvalidOperationException("UiHost.Run has not been called yet.");
+
+    public void Close() => _window?.Invoke(() => _window.Close());
+
+    public event Action? UiInitialized;
 
     /// <summary>
     /// Blocks until the window closes. Photino must own the main thread, so the
@@ -84,9 +89,13 @@ public sealed class UiHost
                     new[] { ("PNG", new[] { "*.png" }) }).ConfigureAwait(false);
                 return files?.FirstOrDefault();
             },
-            openSkinWindow: OpenSkinWindow);
+            openSkinWindow: OpenSkinWindow,
+            chooseMods: () => _window!.ShowOpenFileAsync(
+                _languages.Translate("installedMods.upload"), GetDownloadsDirectory(),
+                multiSelect: true, new[] { ("Minecraft mods (.jar)", new[] { "*.jar" }) }));
 
         _window.RegisterWebMessageReceivedHandler((_, message) => _bridge!.HandleMessage(message));
+        _bridge.UiInitialized += () => UiInitialized?.Invoke();
 
         // Fires once the WebView exists, which is the earliest point at which
         // SendWebMessage will not be dropped.
@@ -183,11 +192,12 @@ public sealed class UiHost
         {
             var paths = LauncherPaths.Resolve();
             Directory.CreateDirectory(paths.Cache);
-            var target = Path.Combine(paths.Cache, "window-icon.png");
+            var asset = OperatingSystem.IsWindows() ? "app.ico" : "icon.png";
+            var target = Path.Combine(paths.Cache, $"window-icon-{LauncherCore.LauncherVersion}-{asset}");
 
             if (!File.Exists(target))
             {
-                using var source = _assets.Resolve(this, EmbeddedAssets.Scheme, "app://launcher/assets/icon.png", out _);
+                using var source = _assets.Resolve(this, EmbeddedAssets.Scheme, new Uri(EmbeddedAssets.EntryPoint, "assets/" + asset).AbsoluteUri, out _);
                 if (source is null)
                     return null;
 
@@ -206,4 +216,21 @@ public sealed class UiHost
 
     private static bool IsDevToolsWanted() =>
         Environment.GetEnvironmentVariable("DUSMP_DEVTOOLS") is "1" or "true";
+
+    private static string GetDownloadsDirectory()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var downloads = new Guid("374DE290-123F-4565-9164-39C4925E467B");
+            if (SHGetKnownFolderPath(ref downloads, 0, IntPtr.Zero, out var pointer) == 0)
+            {
+                try { if (Marshal.PtrToStringUni(pointer) is { Length: > 0 } path) return path; }
+                finally { Marshal.FreeCoTaskMem(pointer); }
+            }
+        }
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+    }
+
+    [DllImport("shell32.dll")]
+    private static extern int SHGetKnownFolderPath(ref Guid folderId, uint flags, IntPtr token, out IntPtr path);
 }

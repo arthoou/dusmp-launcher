@@ -130,6 +130,12 @@ public sealed class ModpackManager : IModpackManager
                 continue;
             }
 
+            // Renaming a mod to .jar.disabled is a player choice, even when a
+            // later manifest drops or changes that mod. Do not adopt or remove
+            // the disabled file as part of normal managed-file maintenance.
+            if (IsDisabledModPath(entry.Path) || HasDisabledCounterpart(entry.Path, absolute))
+                continue;
+
             if (TryStat(absolute) is null)
                 continue;
 
@@ -164,6 +170,20 @@ public sealed class ModpackManager : IModpackManager
                 // plan is the only safe answer; a single skipped file would leave the
                 // install silently incomplete.
                 throw new ManifestValidationException(ManifestErrorKeys.PathTraversal, relative);
+            }
+
+            // Disabled mods deliberately do not match the active manifest.
+            // Honour this before optional selection and hash/repair checks:
+            // neither a launch nor a forced repair may restore an enabled JAR.
+            if (HasDisabledCounterpart(relative, absolute))
+            {
+                preserved.Add(new PlannedFile(file, FileAction.PreservedByUser, absolute + ".disabled"));
+                return;
+            }
+            if (IsDisabledModPath(relative) && TryStat(absolute) is not null)
+            {
+                preserved.Add(new PlannedFile(file, FileAction.PreservedByUser, absolute));
+                return;
             }
 
             var stat = TryStat(absolute);
@@ -276,6 +296,15 @@ public sealed class ModpackManager : IModpackManager
                 continue;
             }
 
+            // A disabled JAR is kept outside the canonical managed ledger. Its
+            // bytes have not been verified against this manifest, and recording
+            // them under .jar would claim ownership of a different file.
+            if (IsDisabledModPath(relative)
+                || HasDisabledCounterpart(relative, absolute)
+                || (IsModJarPath(relative) && planned.Action == FileAction.PreservedByUser
+                    && planned.AbsolutePath.EndsWith(".jar.disabled", StringComparison.OrdinalIgnoreCase)))
+                continue;
+
             var stat = TryStat(absolute);
 
             // Not on disk: a download that never landed, or a preserved file the player
@@ -368,6 +397,9 @@ public sealed class ModpackManager : IModpackManager
                 _trace?.Invoke($"modpack: refusing to delete outside the instance: {relative}");
                 continue;
             }
+
+            if (IsDisabledModPath(relative) || HasDisabledCounterpart(relative, absolute))
+                continue;
 
             try
             {
@@ -476,6 +508,17 @@ public sealed class ModpackManager : IModpackManager
 
         return !choices.TryGetValue(optionalId, out var enabled) || enabled;
     }
+
+    private static bool IsModJarPath(string relative) =>
+        relative.StartsWith("mods/", StringComparison.OrdinalIgnoreCase)
+        && relative.EndsWith(".jar", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDisabledModPath(string relative) =>
+        relative.StartsWith("mods/", StringComparison.OrdinalIgnoreCase)
+        && relative.EndsWith(".jar.disabled", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasDisabledCounterpart(string relative, string absolute) =>
+        IsModJarPath(relative) && File.Exists(absolute + ".disabled");
 
     /// <summary>
     /// Size and mtime of a file, or null when it is absent, is actually a directory,

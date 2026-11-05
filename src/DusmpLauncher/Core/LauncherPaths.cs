@@ -57,6 +57,9 @@ public sealed class LauncherPaths
 
     public string Root { get; }
 
+    /// <summary>The shared folder containing each edition's game directory.</summary>
+    public string Instances => System.IO.Path.Combine(Root, "instances");
+
     /// <summary>The .minecraft-equivalent folder. Mods, configs, saves all live under here.</summary>
     public string Instance { get; }
 
@@ -146,6 +149,7 @@ public sealed class LauncherPaths
     public void EnsureCreated()
     {
         Directory.CreateDirectory(Root);
+        Directory.CreateDirectory(Instances);
         Directory.CreateDirectory(Instance);
         Directory.CreateDirectory(Cache);
         Directory.CreateDirectory(Logs);

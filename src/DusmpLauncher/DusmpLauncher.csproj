@@ -2,14 +2,17 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <OutputType Condition="'$(RuntimeIdentifier)' == 'win-x64' or ('$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')))">WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>DusmpLauncher</AssemblyName>
     <RootNamespace>DusmpLauncher</RootNamespace>
+    <Version>1.3.1</Version>
+    <ApplicationIcon>UI/assets/app.ico</ApplicationIcon>
     <InvariantGlobalization>false</InvariantGlobalization>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- Photino needs a real window; never show a console on Windows. -->
+    <!-- The Windows app uses the GUI subsystem; Linux keeps its console entry point. -->
     <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
@@ -32,9 +35,16 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>DownloadIntegrity</_Parameter1>
     </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>JavaProvisioning</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>LauncherUpdates</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="../../packaging/release/release-public-key.pem" LogicalName="DusmpLauncher.release-public-key.pem" />
     <EmbeddedResource Include="UI/**/*" WithCulture="false" />
     <EmbeddedResource Include="Localization/Languages/*.json" WithCulture="false" />
     <EmbeddedResource Include="Network/Fixtures/*.json" />

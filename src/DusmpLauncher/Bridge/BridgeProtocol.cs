@@ -25,6 +25,7 @@ public static class BridgeProtocol
         public const string GetState = "getState";
         public const string GetLanguages = "getLanguages";
         public const string SelectLanguage = "selectLanguage";
+        public const string SelectJvmPreset = "selectJvmPreset";
         public const string GetCountries = "getCountries";
         public const string SelectCountry = "selectCountry";
         public const string LoginMicrosoft = "loginMicrosoft";
@@ -63,6 +64,9 @@ public static class BridgeProtocol
         public const string ResetSkin = "resetSkin";
         public const string SetCape = "setCape";
         public const string OpenInstanceFolder = "openInstanceFolder";
+        public const string GetInstalledMods = "getInstalledMods";
+        public const string SetInstalledModEnabled = "setInstalledModEnabled";
+        public const string ImportMods = "importMods";
         public const string OpenExternal = "openExternal";
         public const string RetryStartup = "retryStartup";
         public const string WindowMinimize = "windowMinimize";
@@ -91,6 +95,7 @@ public static class BridgeProtocol
     {
         public const string Loading = "loading";
         public const string OnboardingLanguage = "onboarding-language";
+        public const string OnboardingDevice = "onboarding-device";
         public const string OnboardingAccount = "onboarding-account";
         public const string OnboardingEdition = "onboarding-edition";
         public const string OnboardingPlayMode = "onboarding-play-mode";
@@ -99,13 +104,14 @@ public static class BridgeProtocol
         public const string OnboardingOptionalMods = "onboarding-optional-mods";
         public const string Main = "main";
         public const string Settings = "settings";
+        public const string InstalledMods = "installed-mods";
         public const string Profile = "profile";
         public const string Error = "error";
 
         /// <summary>The steps of the first-run setup, in the order they are shown.</summary>
         public static readonly string[] Onboarding =
         {
-            OnboardingLanguage, OnboardingPlayMode, OnboardingExternalLauncher,
+            OnboardingLanguage, OnboardingDevice, OnboardingPlayMode, OnboardingExternalLauncher,
             OnboardingAccount, OnboardingCountry, OnboardingEdition, OnboardingOptionalMods,
         };
     }

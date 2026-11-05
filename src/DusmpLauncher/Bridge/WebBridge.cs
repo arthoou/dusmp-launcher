@@ -21,6 +21,7 @@ public sealed class WebBridge
     private readonly Func<Task<string?>> _chooseFolder;
     private readonly Func<Task<string?>> _choosePng;
     private readonly Action _openSkinWindow;
+    private readonly Func<Task<string[]?>> _chooseMods;
 
     /// <summary>Cancels an in-flight device-code sign-in when the player backs out.</summary>
     private CancellationTokenSource? _signInCts;
@@ -35,7 +36,8 @@ public sealed class WebBridge
         Action close,
         Func<Task<string?>>? chooseFolder = null,
         Func<Task<string?>>? choosePng = null,
-        Action? openSkinWindow = null)
+        Action? openSkinWindow = null,
+        Func<Task<string[]?>>? chooseMods = null)
     {
         _core = core;
         _languages = languages;
@@ -45,6 +47,7 @@ public sealed class WebBridge
         _chooseFolder = chooseFolder ?? (() => Task.FromResult<string?>(null));
         _choosePng = choosePng ?? (() => Task.FromResult<string?>(null));
         _openSkinWindow = openSkinWindow ?? (() => { });
+        _chooseMods = chooseMods ?? (() => Task.FromResult<string[]?>(null));
 
         _core.StateChanged += OnStateChanged;
         _core.ProgressChanged += OnProgressChanged;
@@ -53,6 +56,7 @@ public sealed class WebBridge
 
     /// <summary>True once the page has told us it is listening.</summary>
     public bool UiReady { get; private set; }
+    public event Action? UiInitialized;
 
     /// <summary>Entry point for Photino's WebMessageReceived.</summary>
     public void HandleMessage(string raw)
@@ -103,6 +107,7 @@ public sealed class WebBridge
         {
             case BridgeProtocol.Commands.Ready:
                 UiReady = true;
+                UiInitialized?.Invoke();
                 return BuildBootstrap();
 
             case BridgeProtocol.Commands.GetState:
@@ -131,6 +136,10 @@ public sealed class WebBridge
                     current = _core.State.Country,
                     countries = _languages.Countries,
                 };
+
+            case BridgeProtocol.Commands.SelectJvmPreset:
+                await _core.SetJvmPresetAsync(RequireString(request, "preset")).ConfigureAwait(false);
+                return _core.CurrentSettings;
 
             case BridgeProtocol.Commands.SelectCountry:
             {
@@ -311,6 +320,25 @@ public sealed class WebBridge
                 await _core.RepairAsync().ConfigureAwait(false);
                 return null;
 
+            case BridgeProtocol.Commands.GetInstalledMods:
+                return await _core.GetInstalledModsAsync().ConfigureAwait(false);
+
+            case BridgeProtocol.Commands.SetInstalledModEnabled:
+            {
+                if (request.Payload is not { } modPayload || !modPayload.TryGetProperty("enabled", out var modEnabled)
+                    || modEnabled.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    throw new LauncherException("error.mods.invalidFile");
+                return await _core.SetInstalledModEnabledAsync(RequireString(request, "fileName"), modEnabled.GetBoolean()).ConfigureAwait(false);
+            }
+
+            case BridgeProtocol.Commands.ImportMods:
+            {
+                var files = await _chooseMods().ConfigureAwait(false);
+                return files is { Length: > 0 }
+                    ? await _core.ImportModsAsync(files).ConfigureAwait(false)
+                    : await _core.GetInstalledModsAsync().ConfigureAwait(false);
+            }
+
             case BridgeProtocol.Commands.OpenInstanceFolder:
                 _core.OpenInstanceFolder();
                 return null;
@@ -391,7 +419,7 @@ public sealed class WebBridge
     {
         try
         {
-            _send(JsonSerializer.Serialize(envelope, BridgeProtocol.Json));
+            _send(EmbeddedAssets.UsePlatformOrigin(JsonSerializer.Serialize(envelope, BridgeProtocol.Json)));
         }
         catch (Exception ex)
         {

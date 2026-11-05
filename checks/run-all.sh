@@ -23,7 +23,7 @@ run() {
 
 run "ui-startup" node checks/ui-startup.cjs
 run "skin-model" node checks/skin-model.cjs
-for project in StartupAssets ExternalDetection AuthFlow DownloadIntegrity; do
+for project in StartupAssets ExternalDetection AuthFlow DownloadIntegrity JvmPresets JavaProvisioning LauncherUpdates DesktopShortcuts; do
   run "$project" "$DOTNET" run --project "checks/$project" -c Release
 done
 

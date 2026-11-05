@@ -8,6 +8,9 @@
   let editions = [], currentEdition = null, switchingEdition = false;
   let authPromise = null, authCancelPromise = null, authGeneration = 0;
   let progressFrame = null, latestProgress = null, validationSequence = 0;
+  let settingsJvmPreset = null, settingsMinRamMb = 512;
+  let installedMods = [], installedModSwitches = [], installedModsLoading = false, installedModsMutating = false;
+  let installedModsReturn = 'main', installedModsError = '', installedModsRequest = 0;
   const $ = id => document.getElementById(id);
   // ?? rather than ||: several subtitles are deliberately empty, and an
   // empty string falling through printed the raw key on screen. A key that
@@ -19,7 +22,7 @@
     return new Promise((resolve, reject) => {
       const id = String(++nextId);
       // Sign-in and installation commands can remain open while the user works.
-      const timer = setTimeout(() => { if (pending.delete(id)) reject(Object.assign(Error(t('error.bridge.timeout')), { key: 'error.bridge.timeout' })); }, ['loginMicrosoft', 'startGame', 'repairInstallation', 'resetInstallation', 'selectEdition'].includes(command) ? 960000 : 120000);
+      const timer = setTimeout(() => { if (pending.delete(id)) reject(Object.assign(Error(t('error.bridge.timeout')), { key: 'error.bridge.timeout' })); }, ['loginMicrosoft', 'startGame', 'repairInstallation', 'resetInstallation', 'selectEdition', 'importMods'].includes(command) ? 960000 : 120000);
       pending.set(id, { resolve, reject, timer });
       window.external.sendMessage(JSON.stringify({ id, command, payload }));
     });
@@ -30,8 +33,10 @@
     document.querySelectorAll('[data-i18n-aria-label]').forEach(e => e.setAttribute('aria-label', t(e.dataset.i18nAriaLabel)));
     document.querySelectorAll('[data-i18n-alt]').forEach(e => e.alt = t(e.dataset.i18nAlt));
     document.title = t('app.windowTitle');
+    if (uiScreen === 'installed-mods') renderInstalledMods();
   }
   function screen(name) {
+    if (name === 'main' && state.launcherUpdatePending) name = state.fatalErrorKey ? 'error' : 'loading';
     if (name === uiScreen && document.querySelector('.screen.is-active')) return;
     uiScreen = name;
     document.querySelectorAll('.screen').forEach(e => e.classList.toggle('is-active', e.dataset.screen === name));
@@ -45,6 +50,8 @@
     if (name === 'onboarding-external-launcher') loadExternalLaunchers();
     if (name === 'onboarding-language') renderLanguages($('language-search').value);
     if (name === 'onboarding-country') renderCountries($('country-search').value);
+    if (name === 'onboarding-device') renderDevicePreset();
+    if (name === 'installed-mods') loadInstalledMods();
   }
   function event(name, payload) {
     if (name === 'screen') renderState(payload);
@@ -68,10 +75,11 @@
   // Display names for the launchers DUSMP can hand sign-in to.
   const externalNames = { prism: 'Prism Launcher', official: 'Minecraft Launcher' };
   function renderState(s) {
-    const oldScreen = state.screen; state = s || state;
+    const oldScreen = state.screen, wasReady = state.readyToPlay; state = s || state;
     text('error-message', state.fatalErrorKey ? (table[state.fatalErrorKey] ? t(state.fatalErrorKey) : t('error.unknown')) : '');
     text('error-detail', state.fatalErrorDetail || '');
-    if (state.screen === 'error' || (!editingSettings && (oldScreen !== state.screen || uiScreen === 'loading'))) screen(state.screen || 'loading');
+    if (state.launcherUpdatePending && state.screen === 'main') screen('main');
+    else if (state.screen === 'error' || (!editingSettings && (oldScreen !== state.screen || uiScreen === 'loading'))) screen(state.screen || 'loading');
     // In external mode DUSMP holds no account at all — the host launcher does —
     // so the chip names that launcher instead of showing an empty player.
     const external = state.playMode === 'external';
@@ -96,12 +104,13 @@
     $('settings-logout-btn').hidden = external;
     $('btn-accounts').hidden = external;
     text('settings-mods-value', (state.optionalMods || mods).filter(x => x.enabled).length);
+    renderDevicePreset();
+    updateInstalledModControls();
+    if (uiScreen === 'installed-mods' && state.readyToPlay === true && wasReady !== true) loadInstalledMods();
     if (state.progress) queueProgress(state.progress);
     if (state.servers) onceChanged('servers', state.servers, renderServers);
     if (state.news) onceChanged('news', state.news, renderNews);
     if (state.optionalMods) onceChanged('mods', state.optionalMods, renderMods);
-    $('launcher-update').hidden = !state.launcherUpdate;
-    text('launcher-update-text', state.launcherUpdate ? `${t('main.launcherUpdate.available')} · ${state.launcherUpdate.version}` : '');
     $('maintenance-banner').hidden = !state.status?.maintenance;
     text('maintenance-text', localized(state.status?.message));
     const running = ['preparing', 'launching', 'running'].includes(state.gameState);
@@ -354,7 +363,7 @@
     const head = $('main-avatar');
     if (!head) return;
     const skin = overrideUrl || (state.profile?.skinUrl ?? '');
-    const usable = /^(https:\/\/|app:\/\/launcher\/assets\/)/.test(skin);
+    const usable = /^(https:\/\/|(?:app:\/\/launcher|http:\/\/localhost)\/assets\/)/.test(skin);
     const cropped = usable && !overrideUrl;
     head.classList.toggle('is-skin', cropped);
     head.style.backgroundImage = usable ? `url("${skin}")` : 'url("app://launcher/assets/icon.png")';
@@ -371,7 +380,7 @@
     progressFrame = window.requestAnimationFrame(() => { progressFrame = null; renderProgress(latestProgress); });
   }
   function renderProgress(p) {
-    const downloading = String(p.stage).toLowerCase() === 'downloadingfiles';
+    const downloading = ['downloadingfiles', 'downloadinglauncher'].includes(String(p.stage).toLowerCase());
     const percent = p.percent == null ? null : Math.max(0, Math.min(100, p.percent));
     text('loading-stage', stageLabel(p.stage));
     $('loading-bar-track').hidden = percent == null;
@@ -392,7 +401,7 @@
   }
   function renderStage(p) { if (p?.stage) text('loading-stage', stageLabel(p.stage)); }
   function formatBytes(n) { if (!n || n < 0) return '0 B'; const u = ['B', 'KB', 'MB', 'GB', 'TB'], i = Math.min(Math.floor(Math.log(n) / Math.log(1024)), 4); return `${(n / 1024 ** i).toFixed(i ? 1 : 0)} ${u[i]}`; }
-  function flagImage(url) { return /^app:\/\/launcher\/assets\/flags\/[a-z]{2}\.svg$/.test(url || '') ? `<img class="picker-flag" src="${url}" alt="" loading="lazy" width="28" height="21">` : '<span class="picker-flag flag-placeholder" aria-hidden="true"></span>'; }
+  function flagImage(url) { return /^(?:app:\/\/launcher|http:\/\/localhost)\/assets\/flags\/[a-z]{2}\.svg$/.test(url || '') ? `<img class="picker-flag" src="${url}" alt="" loading="lazy" width="28" height="21">` : '<span class="picker-flag flag-placeholder" aria-hidden="true"></span>'; }
   function renderLanguages(filter = '') {
     const q = filter.toLocaleLowerCase(); const list = $('language-list'); list.replaceChildren();
     for (const l of languages.filter(x => `${x.englishName} ${x.nativeName} ${x.tag}`.toLocaleLowerCase().includes(q))) {
@@ -413,6 +422,114 @@
     $('country-empty').hidden = list.children.length > 0;
   }
   async function choose(action) { if (selecting) return; selecting = true; document.body.classList.add('is-selecting'); try { await action(); } catch (e) { showError(e); } finally { selecting = false; document.body.classList.remove('is-selecting'); } }
+  function renderDevicePreset() {
+    const preset = editingSettings ? settingsJvmPreset : state.jvmPreset;
+    $('device-back').hidden = !editingSettings && !state.firstLaunch;
+    for (const id of ['low8gb', 'default', 'smooth']) {
+      const button = $('device-' + id);
+      button.classList.toggle('is-selected', preset === id);
+      button.setAttribute('aria-pressed', String(preset === id));
+    }
+    text('settings-device-value', ['low8gb', 'default', 'smooth'].includes(preset)
+      ? t('onboarding.device.' + preset + '.name') : t('settings.devicePreset.unselected'));
+  }
+  async function selectDevicePreset(preset) {
+    return choose(async () => {
+      const controls = ['device-low8gb', 'device-default', 'device-smooth', 'device-back'].map($);
+      controls.forEach(button => button.disabled = true);
+      try {
+        fillSettings(await send('selectJvmPreset', { preset }));
+        await refreshState();
+        screen(editingSettings ? 'settings' : state.screen);
+      } finally { controls.forEach(button => button.disabled = false); }
+    });
+  }
+  function installedModEditsAllowed() {
+    return !['preparing', 'launching', 'running'].includes(state.gameState) && state.readyToPlay === true;
+  }
+  function updateInstalledModControls() {
+    const busy = !installedModEditsAllowed();
+    const disabled = busy || installedModsLoading || installedModsMutating;
+    $('installed-mods-upload').disabled = disabled;
+    for (const input of installedModSwitches) input.disabled = disabled;
+    const message = installedModsLoading ? t('installedMods.loading')
+      : installedModsError || (installedModsMutating ? t('installedMods.saving') : busy ? t('error.mods.busy') : '');
+    text('installed-mods-status', message);
+    $('installed-mods-status').hidden = !message;
+  }
+  async function loadInstalledMods() {
+    const request = ++installedModsRequest;
+    installedModsLoading = true; installedModsError = '';
+    updateInstalledModControls();
+    try {
+      const result = await send('getInstalledMods');
+      if (request !== installedModsRequest) return;
+      installedMods = Array.isArray(result) ? result : [];
+    } catch (e) {
+      if (request !== installedModsRequest) return;
+      installedModsError = e?.key && table[e.key] ? t(e.key) : e?.message || t('error.mods.failed');
+    } finally {
+      if (request === installedModsRequest) { installedModsLoading = false; renderInstalledMods(); }
+    }
+  }
+  function renderInstalledMods() {
+    const list = $('installed-mods-list');
+    list.replaceChildren(); installedModSwitches = [];
+    const query = String($('installed-mods-search').value || '').toLocaleLowerCase().trim();
+    const visible = installedMods.filter(mod => `${mod.name || ''} ${mod.fileName || ''} ${mod.version || ''}`.toLocaleLowerCase().includes(query));
+    for (const mod of visible) {
+      const row = document.createElement('tr');
+      row.className = mod.enabled ? '' : 'installed-mod-disabled';
+      const projectCell = document.createElement('td');
+      const project = document.createElement('div'); project.className = 'installed-mod-project';
+      const icon = document.createElement('img'); icon.className = 'installed-mod-icon'; icon.alt = ''; icon.loading = 'lazy';
+      icon.src = safeUrl(mod.icon, 'app://launcher/assets/mod-generic.svg');
+      icon.onerror = () => { icon.onerror = null; icon.src = 'app://launcher/assets/mod-generic.svg'; };
+      const details = document.createElement('div');
+      const name = document.createElement('span'); name.className = 'installed-mod-name'; name.textContent = mod.name || mod.fileName || '';
+      const status = document.createElement('span'); status.className = 'installed-mod-state'; status.textContent = t(mod.enabled ? 'installedMods.enabled' : 'installedMods.disabled');
+      details.append(name, status); project.append(icon, details); projectCell.append(project);
+      const versionCell = document.createElement('td');
+      const version = document.createElement('span'); version.className = 'installed-mod-version'; version.textContent = mod.version || '—';
+      const file = document.createElement('span'); file.className = 'installed-mod-filename'; file.textContent = mod.fileName || ''; file.dir = 'ltr';
+      versionCell.append(version, file);
+      const actions = document.createElement('td'); actions.className = 'installed-mods-actions';
+      const toggle = document.createElement('label'); toggle.className = 'installed-mod-toggle';
+      const input = document.createElement('input'); input.type = 'checkbox'; input.checked = !!mod.enabled;
+      input.setAttribute('role', 'switch');
+      input.setAttribute('aria-label', t(mod.enabled ? 'installedMods.disable' : 'installedMods.enable', { name: mod.name || mod.fileName || '' }));
+      input.addEventListener('change', () => setInstalledModEnabled(mod, input.checked));
+      const track = document.createElement('span'); track.className = 'installed-mod-toggle-track'; track.setAttribute('aria-hidden', 'true');
+      toggle.append(input, track); actions.append(toggle); installedModSwitches.push(input);
+      row.append(projectCell, versionCell, actions); list.append(row);
+    }
+    text('installed-mods-count', t('installedMods.count', { count: installedMods.length }));
+    text('installed-mods-empty', t(query && installedMods.length ? 'installedMods.noResults' : 'installedMods.empty'));
+    $('installed-mods-empty').hidden = installedModsLoading || visible.length > 0;
+    updateInstalledModControls();
+  }
+  async function setInstalledModEnabled(mod, enabled) {
+    if (installedModsMutating || !installedModEditsAllowed()) { renderInstalledMods(); return; }
+    installedModsMutating = true; installedModsError = ''; updateInstalledModControls();
+    try {
+      const result = await send('setInstalledModEnabled', { fileName: mod.fileName, enabled });
+      installedMods = Array.isArray(result) ? result : installedMods;
+    } catch (e) { showError(e); }
+    finally { installedModsMutating = false; renderInstalledMods(); }
+  }
+  async function importInstalledMods() {
+    if (installedModsMutating || !installedModEditsAllowed()) return;
+    installedModsMutating = true; installedModsError = ''; updateInstalledModControls();
+    const existing = new Set(installedMods.map(mod => mod.fileName));
+    try {
+      const result = await send('importMods');
+      if (Array.isArray(result)) {
+        installedMods = result;
+        if (result.some(mod => !existing.has(mod.fileName))) toast(t('installedMods.imported'));
+      }
+    } catch (e) { showError(e); }
+    finally { installedModsMutating = false; renderInstalledMods(); }
+  }
   const MOD_ICON_FALLBACK = 'app://launcher/assets/mod-generic.svg';
   function renderMods(list = mods) {
     mods = list || []; $('mods-list').replaceChildren();
@@ -508,7 +625,7 @@
   // machine, which the asset scheme cannot serve from disk. Restricted to the
   // two image types we inline; an <img> never executes what a data URL holds.
   function safeUrl(x, fallback = 'app://launcher/assets/icon.png') {
-    return /^(https:\/\/|app:\/\/launcher\/assets\/|data:image\/(?:png|svg\+xml);base64,)/.test(x || '') ? x : fallback;
+    return /^(https:\/\/|(?:app:\/\/launcher|http:\/\/localhost)\/assets\/|data:image\/(?:png|svg\+xml);base64,)/.test(x || '') ? x : fallback;
   }
   function toast(msg) { const e = document.createElement('div'); e.className = 'toast'; e.textContent = msg; $('toasts').append(e); setTimeout(() => e.remove(), 6000); }
   function showError(e) { if (['error.auth.cancelled', 'error.cancelled'].includes(e?.key)) return; toast(e?.key && table[e.key] ? t(e.key) : e?.message || t('error.unknown')); }
@@ -666,7 +783,11 @@
   }
   bind('playmode-dusmp', async () => { await send('setPlayMode', { mode: 'dusmp' }); await refreshState(); screen(state.screen); });
   bind('playmode-external', async () => { if (!editingSettings) { await send('setPlayMode', { mode: 'external' }); await refreshState(); } screen('onboarding-external-launcher'); });
-  bind('playmode-back', () => goBack('onboarding-language'));
+  bind('playmode-back', () => goBack('onboarding-device'));
+  bind('device-low8gb', () => selectDevicePreset('low8gb'));
+  bind('device-default', () => selectDevicePreset('default'));
+  bind('device-smooth', () => selectDevicePreset('smooth'));
+  bind('device-back', () => goBack('onboarding-language'));
   bind('external-back', () => goBack('onboarding-play-mode'));
   bind('btn-login-microsoft', () => loginMicrosoft());
   bind('btn-auth-retry', () => { clearAuthError(); return loginMicrosoft(); });
@@ -689,7 +810,6 @@
     }
     await send('startGame');
   });
-  bind('btn-launcher-update', () => { const url = state.launcherUpdate?.downloadUrl || state.launcherUpdate?.notesUrl; return url ? send('openExternal', { url }) : toast(t('main.launcherUpdate.unavailable')); });
   bind('btn-settings', async () => { fillSettings(await send('getSettings')); editingSettings = true; renderState(state); screen('settings'); });
   // Reachable from the error screen too, so a broken start never traps the
   // player on a screen with no way to change language or account.
@@ -704,6 +824,10 @@
   bind('main-player', () => state.playMode === 'external' ? $('btn-settings').click() : (accounts.length > 1 ? toggleDrawerFromChip() : send('openSkinWindow')));
   bind('btn-accounts', () => (drawerOpen ? closeDrawer() : openDrawer()));
   bind('btn-folder', () => send('openInstanceFolder'));
+  bind('btn-installed-mods', () => { installedModsReturn = uiScreen === 'settings' ? 'settings' : 'main'; screen('installed-mods'); });
+  bind('installed-mods-back', () => screen(installedModsReturn === 'settings' ? 'settings' : state.screen || 'main'));
+  bind('installed-mods-upload', importInstalledMods);
+  $('installed-mods-search').oninput = renderInstalledMods;
   bind('edition-back', () => goBack('onboarding-country'));
   bind('btn-add-account', () => { closeDrawer(); resetAuth(); $('offline-panel').hidden = true; screen('onboarding-account'); });
   function toggleDrawerFromChip() { drawerOpen ? closeDrawer() : openDrawer(); }
@@ -743,6 +867,7 @@
   bind('btn-save-settings', async () => { await send('saveSettings', readSettings()); editingSettings = false; screen('main'); toast(t('common.saved')); });
   bind('settings-language-btn', () => screen('onboarding-language')); bind('settings-country-btn', () => screen('onboarding-country'));
   bind('settings-launcher-btn', () => screen('onboarding-play-mode'));
+  bind('settings-device-btn', () => screen('onboarding-device'));
   bind('settings-account-btn', () => { if (state.playMode === 'external') return screen('onboarding-external-launcher'); resetAuth(); $('offline-panel').hidden = true; screen('onboarding-account'); });
   bind('settings-logout-btn', async () => { editingSettings = false; await send('logout'); });
   bind('settings-mods-btn', () => { text('mods-continue', t('common.done')); screen('onboarding-optional-mods'); });
@@ -775,11 +900,14 @@
   $('offline-username').oninput = async () => { const sequence = ++validationSequence; try { const r = await send('validateOfflineName', { username: $('offline-username').value }); if (sequence !== validationSequence) return; text('offline-error', r.errorKey ? t(r.errorKey) : ''); $('btn-offline-continue').disabled = !!r.errorKey; } catch (e) { showError(e); } };
   $('offline-username').onkeydown = e => { if (e.key === 'Enter' && !$('btn-offline-continue').disabled) $('btn-offline-continue').click(); };
   function fillSettings(s) {
+    settingsJvmPreset = s.jvmPreset ?? null;
+    settingsMinRamMb = s.minRamMb ?? 512;
+    renderDevicePreset();
     $('set-ram').value = s.maxRamMb || 4096; text('set-ram-value', `${$('set-ram').value} MB`); $('set-java-path').value = s.javaPath || ''; $('set-jvm-args').value = s.extraJvmArgs || '';
-    $('set-width').value = s.windowWidth || 854; $('set-height').value = s.windowHeight || 480; $('set-fullscreen').checked = !!s.fullscreen; $('set-close-on-launch').checked = !!s.closeOnLaunch; $('set-auto-join').checked = !!s.autoJoinServer;
+    $('set-width').value = s.windowWidth || 854; $('set-height').value = s.windowHeight || 480; $('set-fullscreen').checked = !!s.fullscreen; $('set-close-on-launch').checked = !!s.closeOnLaunch;
     $('set-concurrency').value = s.downloadConcurrency || 6; $('set-concurrency-value').value = $('set-concurrency').value;
   }
-  function readSettings() { return { maxRamMb: +$('set-ram').value, minRamMb: 512, javaPath: $('set-java-path').value || null, extraJvmArgs: $('set-jvm-args').value, windowWidth: +$('set-width').value, windowHeight: +$('set-height').value, fullscreen: $('set-fullscreen').checked, closeOnLaunch: $('set-close-on-launch').checked, autoJoinServer: $('set-auto-join').checked, downloadConcurrency: +$('set-concurrency').value }; }
+  function readSettings() { return { jvmPreset: settingsJvmPreset, maxRamMb: +$('set-ram').value, minRamMb: Math.min(settingsMinRamMb, +$('set-ram').value), javaPath: $('set-java-path').value || null, extraJvmArgs: $('set-jvm-args').value, windowWidth: +$('set-width').value, windowHeight: +$('set-height').value, fullscreen: $('set-fullscreen').checked, closeOnLaunch: $('set-close-on-launch').checked, downloadConcurrency: +$('set-concurrency').value }; }
   window.external.receiveMessage(raw => {
     try { const m = JSON.parse(raw); if (m.kind === 'event') event(m.event, m.payload); else if (m.kind === 'response') { const p = pending.get(String(m.id)); if (p) { pending.delete(String(m.id)); clearTimeout(p.timer); m.ok ? p.resolve(m.result) : p.reject(Object.assign(Error(m.errorDetail || m.errorKey), { key: m.errorKey })); } } }
     catch (e) { console.error(e); }

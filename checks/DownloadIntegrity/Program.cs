@@ -6,6 +6,7 @@ using DusmpLauncher.Core;
 using DusmpLauncher.Downloads;
 using DusmpLauncher.Models;
 using DusmpLauncher.Modpack;
+using DusmpLauncher.Network;
 
 // Proves the one property that makes a public mirror safe to use at all: the
 // launcher installs the file the manifest names, or it installs nothing. A CDN
@@ -165,7 +166,94 @@ try
     manifests.Validate(new ModpackManifest { Version = "0.0.1", Minecraft = "1.20.1", Loader = "forge", LoaderVersion = "47.4.10" });
     manifests.Validate(new ModpackManifest { Version = "0.0.1", Minecraft = "25w01a", Loader = "neoforge", LoaderVersion = "21.9.9" });
 
-    Console.WriteLine("PASS: espelho com versao errada recusado, queda para a origem DUSMP, tamanho conferido; limpeza preserva mundos e configuracoes do jogador; requisitos de loader lidos dos mods; escolhas de mods opcionais sobrevivem ao reinicio; loader da serie errada recusado antes de baixar.");
+    // 7. As APIs do Modrinth e do CurseForge.
+    //
+    //    O resolvedor existe para que um jar publico venha do CDN do autor em
+    //    vez do nosso. Ele nunca pode quebrar a instalacao, mas tambem nao pode
+    //    transformar "chave errada" e "mod nao esta la" na mesma coisa.
+    var jar = new ModFile { Path = "mods/exemplo.jar", Size = 10, Sha256 = wantedSha, Sha1 = "b".PadRight(40, 'b'), Fingerprint = 123456789 };
+    var asked = new List<string>();
+    HttpClient Api(Func<string, HttpResponseMessage> serve) => new(new StubHandler(url => { asked.Add(url); return serve(url); }));
+
+    // Uma chave explicitamente vazia desativa o CurseForge.
+    asked.Clear();
+    await new ExternalMirrorResolver(Api(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}") }), null, curseForgeApiKey: "")
+        .ResolveAsync(new[] { jar });
+    Check(!asked.Any(u => u.Contains("curseforge")), "Sem chave o CurseForge nao pode ser chamado");
+    Check(asked.Any(u => u.Contains("modrinth")), "O Modrinth e publico e tem de ser consultado sempre");
+
+    // A chave embutida funciona sem configurar o ambiente; os overrides
+    // continuam tendo prioridade e a chave so e enviada ao CurseForge.
+    async Task<string?> SentCurseForgeKey(string? key = null)
+    {
+        string? sentKey = null;
+        var leakedKey = false;
+        using var http = new HttpClient(new StubHandler(
+            url => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(url.Contains("curseforge") ? "{\"data\":{\"exactMatches\":[]}}" : "{}") },
+            request =>
+            {
+                if (!request.Headers.TryGetValues("x-api-key", out var values)) return;
+                if (request.RequestUri!.Host == "api.curseforge.com") sentKey = values.FirstOrDefault();
+                else leakedKey = true;
+            }));
+        await new ExternalMirrorResolver(http, curseForgeApiKey: key).ResolveAsync(new[] { jar });
+        Check(!leakedKey, "A chave do CurseForge nao pode ser enviada ao Modrinth");
+        return sentKey;
+    }
+
+    var savedKey = Environment.GetEnvironmentVariable(ExternalMirrorResolver.CurseForgeApiKeyVariable);
+    var savedLegacyKey = Environment.GetEnvironmentVariable(ExternalMirrorResolver.LegacyCurseForgeApiKeyVariable);
+    try
+    {
+        Environment.SetEnvironmentVariable(ExternalMirrorResolver.CurseForgeApiKeyVariable, null);
+        Environment.SetEnvironmentVariable(ExternalMirrorResolver.LegacyCurseForgeApiKeyVariable, null);
+        Check(!string.IsNullOrWhiteSpace(await SentCurseForgeKey()), "O CurseForge precisa usar a chave embutida sem variaveis de ambiente");
+        Environment.SetEnvironmentVariable(ExternalMirrorResolver.LegacyCurseForgeApiKeyVariable, "chave-legada");
+        Check(await SentCurseForgeKey() == "chave-legada", "A variavel legada deve substituir a chave embutida");
+        Environment.SetEnvironmentVariable(ExternalMirrorResolver.CurseForgeApiKeyVariable, " chave-do-ambiente ");
+        Check(await SentCurseForgeKey() == "chave-do-ambiente", "CURSEFORGE_API_KEY tem prioridade sobre a variavel legada");
+        Check(await SentCurseForgeKey("chave-de-teste") == "chave-de-teste", "A chave explicita tem prioridade e usa o cabecalho x-api-key");
+        Check(await SentCurseForgeKey(" ") is null, "Uma chave explicita em branco desativa o CurseForge mesmo com ambiente configurado");
+    }
+    finally
+    {
+        Environment.SetEnvironmentVariable(ExternalMirrorResolver.CurseForgeApiKeyVariable, savedKey);
+        Environment.SetEnvironmentVariable(ExternalMirrorResolver.LegacyCurseForgeApiKeyVariable, savedLegacyKey);
+    }
+
+    // Um 429 nao pode virar insistencia nem resultado inventado. Os dois
+    // servicos sao independentes: o Modrinth pedir calma nao diz nada sobre o
+    // CurseForge, entao o freio e por host.
+    asked.Clear();
+    var throttled = await new ExternalMirrorResolver(Api(_ => new HttpResponseMessage(HttpStatusCode.TooManyRequests)), null, "chave-de-teste")
+        .ResolveAsync(new[] { jar });
+    Check(throttled.Count == 0, "Um 429 nao pode produzir espelho nenhum");
+    Check(asked.Count(u => u.Contains("modrinth")) == 1, $"O Modrinth nao pode ser reconsultado depois de um 429: {asked.Count(u => u.Contains("modrinth"))} chamadas");
+    Check(asked.Count(u => u.Contains("curseforge")) == 1, "Um 429 do Modrinth nao diz nada sobre o CurseForge");
+
+    // downloadUrl nulo e a forma do CurseForge dizer que o autor desligou a
+    // distribuicao por terceiros. Isso nao e erro e nao pode virar URL inventada:
+    // o arquivo continua vindo do espelho do DUSMP.
+    var refused = await new ExternalMirrorResolver(Api(url => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent(url.Contains("curseforge")
+            ? "{\"data\":{\"exactMatches\":[{\"file\":{\"id\":2,\"fileFingerprint\":123456789,\"fileLength\":10,\"downloadUrl\":null}}]}}"
+            : "{}"),
+    }), null, "chave-de-teste").ResolveAsync(new[] { jar });
+    Check(!refused.ContainsKey("mods/exemplo.jar"), "Um mod cuja distribuicao o autor desligou nao pode ganhar URL publica");
+
+    // Controle: com uma downloadUrl de verdade o espelho tem de ser usado. Sem
+    // isto a asercao acima passaria ate com a leitura do CurseForge quebrada.
+    var allowed = await new ExternalMirrorResolver(Api(url => new HttpResponseMessage(HttpStatusCode.OK)
+    {
+        Content = new StringContent(url.Contains("curseforge")
+            ? "{\"data\":{\"exactMatches\":[{\"file\":{\"id\":2,\"fileFingerprint\":123456789,\"fileLength\":10,\"downloadUrl\":\"https://edge.forgecdn.net/files/1/2/exemplo.jar\"}}]}}"
+            : "{}"),
+    }), null, "chave-de-teste").ResolveAsync(new[] { jar });
+    Check(allowed.TryGetValue("mods/exemplo.jar", out var urls) && urls.Any(u => u.Contains("forgecdn")),
+        "Um mod que o autor permite distribuir tem de vir do CDN do CurseForge");
+
+    Console.WriteLine("PASS: espelho com versao errada recusado, queda para a origem DUSMP, tamanho conferido; limpeza preserva mundos e configuracoes do jogador; requisitos de loader lidos dos mods; escolhas de mods opcionais sobrevivem ao reinicio; loader da serie errada recusado antes de baixar; chaves, freio de 429 e distribuicao negada nas APIs externas.");
 }
 finally { try { Directory.Delete(root, true); } catch (IOException) { } }
 
@@ -200,10 +288,13 @@ static void Jar(string path, string modId, string range)
 }
 
 
-sealed class StubHandler(Func<string, HttpResponseMessage> serve) : HttpMessageHandler
+sealed class StubHandler(Func<string, HttpResponseMessage> serve, Action<HttpRequestMessage>? inspect = null) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-        => Task.FromResult(serve(request.RequestUri!.ToString()));
+    {
+        inspect?.Invoke(request);
+        return Task.FromResult(serve(request.RequestUri!.ToString()));
+    }
 }
 
 sealed class StubConfig : IConfigStore

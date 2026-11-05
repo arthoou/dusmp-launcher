@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Reflection;
 using CmlLib.Core;
 using CmlLib.Core.Auth;
-using CmlLib.Core.CommandParser;
 using CmlLib.Core.Installers;
 using CmlLib.Core.ProcessBuilder;
 using CmlLib.Core.Version;
@@ -160,7 +159,9 @@ public sealed class GameLauncher : IGameLauncher, IDisposable
             httpClient: _http);
 
         _launcher = new MinecraftLauncher(parameters);
-        _java = javaProvisioner ?? new JavaProvisioner(_gamePath);
+        var runtimeInstaller = new MojangJavaRuntimeInstaller(_http, _gamePath,
+            _launcher.GameInstaller, _launcher.RulesContext);
+        _java = javaProvisioner ?? new JavaProvisioner(_gamePath, installRuntime: runtimeInstaller.InstallAsync);
     }
 
     /// <summary>Fires for every line the game writes to stdout or stderr.</summary>
@@ -329,7 +330,6 @@ public sealed class GameLauncher : IGameLauncher, IDisposable
         string versionId,
         GameSession session,
         GameSettings settings,
-        ManifestServer? server,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(versionId);
@@ -359,7 +359,7 @@ public sealed class GameLauncher : IGameLauncher, IDisposable
             FullScreen = settings.Fullscreen,
             GameLauncherName = LauncherBrand,
             GameLauncherVersion = LauncherVersion,
-            ExtraJvmArguments = ParseJvmArguments(settings.ExtraJvmArgs),
+            ExtraJvmArguments = ParseJvmArguments(settings),
         };
 
         // --width/--height alongside fullscreen only confuses the game, so the
@@ -368,12 +368,6 @@ public sealed class GameLauncher : IGameLauncher, IDisposable
         {
             option.ScreenWidth = settings.WindowWidth;
             option.ScreenHeight = settings.WindowHeight;
-        }
-
-        if (settings.AutoJoinServer && server is not null && !string.IsNullOrWhiteSpace(server.Host))
-        {
-            option.ServerIp = server.Host.Trim();
-            option.ServerPort = server.Port > 0 ? server.Port : 25565;
         }
 
         Process process;
@@ -714,18 +708,14 @@ public sealed class GameLauncher : IGameLauncher, IDisposable
     }
 
     /// <summary>
-    /// Splits the player's extra JVM args the way a shell would, so a quoted
-    /// argument such as <c>-Dfoo="a b"</c> survives as one argument.
+    /// Keeps quoted custom values together, then applies the selected preset's
+    /// collector policy without overriding the adjustable memory controls.
     /// </summary>
-    private static IEnumerable<MArgument> ParseJvmArguments(string? raw)
+    private static IEnumerable<MArgument> ParseJvmArguments(GameSettings settings)
     {
-        if (string.IsNullOrWhiteSpace(raw))
-            return Array.Empty<MArgument>();
-
         try
         {
-            return Parser.ParseCommandLineToArguments(raw)
-                .Where(token => !string.IsNullOrWhiteSpace(token))
+            return JvmPresets.BuildArguments(settings)
                 .Select(token => new MArgument(token))
                 .ToArray();
         }

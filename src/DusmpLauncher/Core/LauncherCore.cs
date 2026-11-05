@@ -7,6 +7,7 @@ using DusmpLauncher.Localization;
 using DusmpLauncher.Models;
 using DusmpLauncher.Modpack;
 using DusmpLauncher.Network;
+using DusmpLauncher.Updates;
 
 namespace DusmpLauncher.Core;
 
@@ -49,6 +50,9 @@ public sealed class LauncherCore : ILauncherCore
     private readonly IOfflineAuth _offline;
     private IGameLauncher _game;
     private readonly ConnectivityChecker _connectivity;
+    private readonly ILauncherUpdateService? _launcherUpdates;
+    private bool _launcherUpdateBlocked;
+    private readonly Action? _ensureShortcuts;
 
     /// <summary>Null disables automatic translation of news.</summary>
     private readonly NewsTranslator? _newsTranslator;
@@ -95,7 +99,9 @@ public sealed class LauncherCore : ILauncherCore
         NewsTranslator? newsTranslator = null,
         ModrinthMetadataResolver? modMetadata = null,
         MinecraftAppearance? appearance = null,
-        EditionComponentFactory? editionComponents = null)
+        EditionComponentFactory? editionComponents = null,
+        ILauncherUpdateService? launcherUpdates = null,
+        Action? ensureShortcuts = null)
     {
         _paths = paths;
         _config = config;
@@ -112,6 +118,10 @@ public sealed class LauncherCore : ILauncherCore
         _offline = offline;
         _game = game;
         _connectivity = connectivity;
+        _launcherUpdates = launcherUpdates;
+        _launcherUpdateBlocked = launcherUpdates is not null;
+        _ensureShortcuts = ensureShortcuts;
+        _state = _state with { LauncherUpdatePending = _launcherUpdateBlocked };
         _newsTranslator = newsTranslator;
         _modMetadata = modMetadata;
         _appearance = appearance;
@@ -203,6 +213,11 @@ public sealed class LauncherCore : ILauncherCore
         {
             // Shutting down; nothing to report.
         }
+        catch (LauncherUpdateException ex)
+        {
+            Console.Error.WriteLine($"launcher update failed: {ex.ErrorKey}");
+            Fail(ex.ErrorKey, null);
+        }
         catch (LauncherException ex)
         {
             Fail(ex.ErrorKey, ex.Detail);
@@ -235,6 +250,7 @@ public sealed class LauncherCore : ILauncherCore
         Stage(LauncherStage.Starting);
         _paths.EnsureCreated();
         var config = await _config.LoadAsync(ct).ConfigureAwait(false);
+        UseEdition(config.Edition);
         // Use English until the player explicitly selects a language, regardless of the OS locale.
         await _languages.SetLanguageAsync(config.Language ?? LanguageCatalog.DefaultTag, ct)
             .ConfigureAwait(false);
@@ -242,6 +258,7 @@ public sealed class LauncherCore : ILauncherCore
         Mutate(s => s with
         {
             FirstLaunch = config.FirstLaunch,
+            JvmPreset = config.Game.JvmPreset,
             Language = _languages.CurrentTag,
             RightToLeft = _languages.IsRightToLeft,
             Country = config.Country,
@@ -256,6 +273,18 @@ public sealed class LauncherCore : ILauncherCore
         //     this the player chip is blank until the first Play, because the
         //     session used to be rebuilt only inside PlayAsync.
         RestoreProfileAtStartup(config);
+
+        // Self-update finishes before any onboarding, account UI, or modpack installation.
+        if (_launcherUpdates is not null)
+        {
+            _launcherUpdateBlocked = true;
+            Mutate(s => s with { LauncherUpdatePending = true });
+            if (await _launcherUpdates.CheckAsync(new InlineProgress(OnUpdateProgress), ct).ConfigureAwait(false)) return;
+            _launcherUpdateBlocked = false;
+            Mutate(s => s with { LauncherUpdatePending = false });
+        }
+
+        if (!config.FirstLaunch) EnsureShortcuts();
 
         // 2. Connectivity, kept separate from "the API is down" so the message is honest.
         Stage(LauncherStage.CheckingConnection);
@@ -280,7 +309,7 @@ public sealed class LauncherCore : ILauncherCore
             // new Azure app does not require shipping a new launcher build.
             Authentication.AuthConstants.UseApiClientId(launcherInfo?.MicrosoftClientId);
             Mutate(st => st with { MicrosoftSignInConfigured = Authentication.AuthConstants.HasBrowserClient });
-            if (launcherInfo is not null && IsNewer(launcherInfo.Version, LauncherVersion))
+            if (_launcherUpdates is null && launcherInfo is not null && IsNewer(launcherInfo.Version, LauncherVersion))
                 Mutate(s => s with { LauncherUpdate = launcherInfo });
 
             Stage(LauncherStage.CheckingModpackVersion);
@@ -309,7 +338,13 @@ public sealed class LauncherCore : ILauncherCore
         {
             Mutate(st => st with
             {
-                Screen = config.FirstLaunch ? BridgeProtocol.Screens.OnboardingLanguage : BridgeProtocol.Screens.OnboardingEdition,
+                Screen = config.FirstLaunch
+                    ? !string.IsNullOrWhiteSpace(config.Language) && !JvmPresets.IsKnown(config.Game.JvmPreset)
+                        ? BridgeProtocol.Screens.OnboardingDevice
+                        : BridgeProtocol.Screens.OnboardingLanguage
+                    : !JvmPresets.IsKnown(config.Game.JvmPreset)
+                        ? BridgeProtocol.Screens.OnboardingDevice
+                        : BridgeProtocol.Screens.OnboardingEdition,
                 ReadyToPlay = false,
             });
             return;
@@ -392,7 +427,8 @@ public sealed class LauncherCore : ILauncherCore
             // A first launch that has already answered the edition step is past
             // the language step, and sending it back there would make the setup
             // start over every time a pack is chosen.
-            Screen = !config.FirstLaunch ? BridgeProtocol.Screens.Main
+            Screen = !JvmPresets.IsKnown(config.Game.JvmPreset) ? BridgeProtocol.Screens.OnboardingDevice
+                : !config.FirstLaunch ? BridgeProtocol.Screens.Main
                 : string.IsNullOrWhiteSpace(config.Edition) ? BridgeProtocol.Screens.OnboardingLanguage
                 : _remoteOptionalMods.Count > 0 ? BridgeProtocol.Screens.OnboardingOptionalMods
                 : BridgeProtocol.Screens.Main,
@@ -648,11 +684,12 @@ public sealed class LauncherCore : ILauncherCore
                 Language = _languages.CurrentTag,
                 RightToLeft = _languages.IsRightToLeft,
                 // Onboarding advances on selection; later changes stay put.
-                // Play mode comes before the account on purpose: a player who is
+                // Device choice establishes the heap and collector before play
+                // mode or any download. Play mode comes before the account: a player who is
                 // going to sign in inside Prism or the Minecraft Launcher must
                 // not be stopped by a Microsoft sign-in here first.
                 Screen = s.Screen == BridgeProtocol.Screens.OnboardingLanguage
-                    ? BridgeProtocol.Screens.OnboardingPlayMode
+                    ? BridgeProtocol.Screens.OnboardingDevice
                     : s.Screen,
             });
         }
@@ -660,6 +697,31 @@ public sealed class LauncherCore : ILauncherCore
         {
             _mutex.Release();
         }
+    }
+
+    public async Task SetJvmPresetAsync(string preset, CancellationToken ct = default)
+    {
+        if (!JvmPresets.IsKnown(preset))
+            throw new LauncherException("error.device.unknown", preset);
+
+        await _mutex.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            JvmPresets.Apply(_config.Current.Game, preset);
+            await _config.SaveAsync(ct).ConfigureAwait(false);
+            Mutate(s => s with
+            {
+                JvmPreset = _config.Current.Game.JvmPreset,
+                Screen = s.Screen == BridgeProtocol.Screens.OnboardingDevice
+                    ? _config.Current.FirstLaunch
+                        ? BridgeProtocol.Screens.OnboardingPlayMode
+                        : _editions.Count > 0 && string.IsNullOrWhiteSpace(_config.Current.Edition)
+                            ? BridgeProtocol.Screens.OnboardingEdition
+                            : BridgeProtocol.Screens.Main
+                    : s.Screen,
+            });
+        }
+        finally { _mutex.Release(); }
     }
 
     public async Task SetCountryAsync(string code, CancellationToken ct = default)
@@ -677,7 +739,8 @@ public sealed class LauncherCore : ILauncherCore
             // Showing an empty "Optional mods" screen is a dead step, so when the
             // pack has none the setup ends here instead.
             var hasOptionalMods = _remoteOptionalMods.Count > 0;
-            if (!needsEdition && !hasOptionalMods && _config.Current.FirstLaunch)
+            if (!needsEdition && !hasOptionalMods && _config.Current.FirstLaunch
+                && JvmPresets.IsKnown(_config.Current.Game.JvmPreset))
             {
                 _config.Current.FirstLaunch = false;
                 await _config.SaveAsync(ct).ConfigureAwait(false);
@@ -686,9 +749,11 @@ public sealed class LauncherCore : ILauncherCore
             Mutate(s => s with
             {
                 Country = code,
-                FirstLaunch = (needsEdition || hasOptionalMods) && s.FirstLaunch,
+                FirstLaunch = _config.Current.FirstLaunch,
                 Screen = s.Screen == BridgeProtocol.Screens.OnboardingCountry
-                    ? (needsEdition
+                    ? (!JvmPresets.IsKnown(_config.Current.Game.JvmPreset) && _config.Current.FirstLaunch
+                        ? BridgeProtocol.Screens.OnboardingDevice
+                        : needsEdition
                         ? BridgeProtocol.Screens.OnboardingEdition
                         : hasOptionalMods
                             ? BridgeProtocol.Screens.OnboardingOptionalMods
@@ -780,12 +845,15 @@ public sealed class LauncherCore : ILauncherCore
 
     public async Task FinishOnboardingAsync(CancellationToken ct = default)
     {
+        RequireLauncherUpdateReady();
         await _mutex.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            RequireDevicePresetForSetup();
             await _optionalMods.MarkAllSeenAsync(_remoteOptionalMods, ct).ConfigureAwait(false);
             _config.Current.FirstLaunch = false;
             await _config.SaveAsync(ct).ConfigureAwait(false);
+            EnsureShortcuts();
 
             RefreshOptionalModState();
             Mutate(s => s with { FirstLaunch = false, Screen = s.FatalErrorKey is null ? BridgeProtocol.Screens.Main : s.Screen });
@@ -796,8 +864,16 @@ public sealed class LauncherCore : ILauncherCore
         }
     }
 
+    private void EnsureShortcuts()
+    {
+        try { _ensureShortcuts?.Invoke(); }
+        catch (Exception ex) { Console.Error.WriteLine($"Could not create launcher shortcuts: {ex.Message}"); }
+    }
+
     public async Task PlayAsync(CancellationToken ct = default)
     {
+        RequireLauncherUpdateReady();
+        RequireDevicePresetForSetup();
         if (_state.Status?.BlockPlay == true)
             throw new LauncherException("error.api.maintenance", "The API reports maintenance.");
 
@@ -893,12 +969,7 @@ public sealed class LauncherCore : ILauncherCore
             // build every mod accepts instead, and say so.
             versionId = await EnsureLoaderSatisfiesModsAsync(versionId, ct).ConfigureAwait(false);
 
-            await _game.LaunchAsync(
-                versionId,
-                session,
-                _config.Current.Game,
-                _config.Current.Game.AutoJoinServer ? _manifest.Server : null,
-                ct).ConfigureAwait(false);
+            await _game.LaunchAsync(versionId, session, _config.Current.Game, ct).ConfigureAwait(false);
 
             Mutate(s => s with { GameState = GameRunState.Running });
         }
@@ -1204,6 +1275,7 @@ public sealed class LauncherCore : ILauncherCore
     /// </summary>
     public void GoToScreen(string screen)
     {
+        RequireLauncherUpdateReady();
         if (Array.IndexOf(BridgeProtocol.Screens.Onboarding, screen) < 0)
             throw new LauncherException("error.unknown", $"Refused to move the setup to '{screen}'.");
 
@@ -1398,20 +1470,76 @@ public sealed class LauncherCore : ILauncherCore
         StartBackgroundWork(plan, ct);
     }
 
+    public Task<IReadOnlyList<InstalledMod>> GetInstalledModsAsync(CancellationToken ct = default) =>
+        new InstalledModManager(Path.Combine(CurrentGameDirectory(), "mods")).ListAsync(ct);
+
+    public async Task<IReadOnlyList<InstalledMod>> SetInstalledModEnabledAsync(string fileName, bool enabled, CancellationToken ct = default)
+    {
+        await _installGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            RequireModChangesAvailable();
+            await StopBackgroundWorkAsync().ConfigureAwait(false);
+            var mods = new InstalledModManager(Path.Combine(CurrentGameDirectory(), "mods"));
+            await mods.SetEnabledAsync(fileName, enabled, ct).ConfigureAwait(false);
+            return await mods.ListAsync(ct).ConfigureAwait(false);
+        }
+        finally { _installGate.Release(); }
+    }
+
+    public async Task<IReadOnlyList<InstalledMod>> ImportModsAsync(IReadOnlyList<string> files, CancellationToken ct = default)
+    {
+        await _installGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            RequireModChangesAvailable();
+            await StopBackgroundWorkAsync().ConfigureAwait(false);
+            var mods = new InstalledModManager(Path.Combine(CurrentGameDirectory(), "mods"));
+            await mods.ImportAsync(files, ct).ConfigureAwait(false);
+            return await mods.ListAsync(ct).ConfigureAwait(false);
+        }
+        finally { _installGate.Release(); }
+    }
+
+    private void RequireModChangesAvailable()
+    {
+        if (State.GameState is GameRunState.Preparing or GameRunState.Launching or GameRunState.Running || !State.ReadyToPlay
+            || _backgroundDownload is { IsCompleted: false })
+            throw new LauncherException("error.mods.busy");
+    }
+
     public async Task SaveSettingsAsync(GameSettings settings, CancellationToken ct = default)
     {
-        _config.Current.Game = settings;
-        await _config.SaveAsync(ct).ConfigureAwait(false);
-        Mutate(s => s);
+        if (settings.JvmPreset is not null && !JvmPresets.IsKnown(settings.JvmPreset))
+            throw new LauncherException("error.device.unknown", settings.JvmPreset);
+        await _mutex.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _config.Current.Game = settings;
+            await _config.SaveAsync(ct).ConfigureAwait(false);
+            Mutate(s => s with { JvmPreset = settings.JvmPreset });
+        }
+        finally { _mutex.Release(); }
+    }
+
+    private void RequireDevicePresetForSetup()
+    {
+        if (JvmPresets.IsKnown(_config.Current.Game.JvmPreset)) return;
+        Mutate(s => s with { Screen = BridgeProtocol.Screens.OnboardingDevice });
+        throw new LauncherException("error.device.required");
     }
 
     public string? ValidateOfflineUsername(string username) => _offline.ValidateUsername(username);
 
     private string CurrentGameDirectory() => _config.Current.PlayMode == "external" && _config.Current.ExternalInstancePath is { Length: > 0 } externalPath
         ? _config.Current.ExternalLauncherId == "prism" ? Path.Combine(externalPath, ".minecraft") : externalPath
-        : _paths.Instance;
+        : _editionPaths.Instance;
 
-    public void OpenInstanceFolder() => OpenPath(CurrentGameDirectory());
+    public void OpenInstanceFolder()
+    {
+        Directory.CreateDirectory(_paths.Instances);
+        OpenPath(_paths.Instances);
+    }
 
     public void OpenExternalUrl(string url)
     {
@@ -1553,6 +1681,17 @@ public sealed class LauncherCore : ILauncherCore
         // A new phase has its own totals; do not carry a download's 100% into an installer.
         var progress = new ProgressSnapshot { Stage = stage };
         Mutate(s => s with { Progress = progress });
+        ProgressChanged?.Invoke(progress);
+    }
+
+    private void RequireLauncherUpdateReady()
+    {
+        if (_launcherUpdateBlocked) throw new LauncherException("error.launcher.updateRequired");
+    }
+
+    private void OnUpdateProgress(ProgressSnapshot progress)
+    {
+        Mutate(s => s with { Screen = BridgeProtocol.Screens.Loading, Progress = progress });
         ProgressChanged?.Invoke(progress);
     }
 

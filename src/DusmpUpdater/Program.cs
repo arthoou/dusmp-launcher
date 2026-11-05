@@ -1,5 +1,12 @@
 using DusmpLauncher.Core;
 
+if (args.Contains("--launcher-version", StringComparer.OrdinalIgnoreCase))
+{
+    var version = typeof(Program).Assembly.GetName().Version;
+    Console.WriteLine($"{version?.Major ?? 0}.{version?.Minor ?? 0}.{version?.Build ?? 0}");
+    return 0;
+}
+
 var paths=LauncherPaths.Resolve();
 paths.EnsureCreated();
 using var stop=new CancellationTokenSource();

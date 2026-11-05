@@ -226,6 +226,12 @@ public sealed partial class ConfigStore : IConfigStore
 
         var game = config.Game;
 
+        // Unknown hand-edited presets act like a legacy custom setup. Choosing
+        // a valid preset is still required before a new installation completes.
+        game.JvmPreset = JvmPresets.IsKnown(game.JvmPreset)
+            ? game.JvmPreset!.Trim().ToLowerInvariant()
+            : null;
+
         game.DownloadConcurrency = Math.Clamp(game.DownloadConcurrency, 1, 16);
 
         // 0 is the documented "decide for me": resolve it once, here, so nothing

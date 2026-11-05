@@ -222,6 +222,24 @@ public sealed class ExternalLauncherManager
             if (!LauncherPaths.IsDeletable(relative)) continue;
             var source = _paths.ResolveInstanceFile(relative); var dest = ResolveUnder(target, relative);
             EnsureNoLinks(target, dest);
+            if (IsDisabledMod(relative) && File.Exists(dest)) continue;
+            if (IsModJar(relative))
+            {
+                var disabledDest = dest + ".disabled";
+                var disabledSource = source + ".disabled";
+                EnsureNoLinks(target, disabledDest);
+                EnsureNoLinks(_paths.Instance, disabledSource);
+                // A local disable is a user override, not a missing or corrupt
+                // managed file. Updates must never replace it with an active JAR.
+                if (File.Exists(disabledDest)) continue;
+                if (File.Exists(disabledSource))
+                {
+                    // Preserve an already-copied external JAR while carrying
+                    // the staged disable choice into that managed instance.
+                    if (File.Exists(dest)) File.Move(dest, disabledDest);
+                    continue;
+                }
+            }
             if (!File.Exists(source)) throw new LauncherException("error.download.failed", "Missing staged modpack file: " + relative);
             if ((entry.WriteOnce || writeOnce.Contains(relative)) && File.Exists(dest)) { writeOnce.Add(relative); continue; }
             if (File.Exists(dest) && new FileInfo(dest).Length == entry.Size
@@ -241,11 +259,18 @@ public sealed class ExternalLauncherManager
         foreach (var old in installation.ManagedFiles.Where(x => !wanted.Contains(x)))
         {
             if (writeOnce.Contains(old) || !LauncherPaths.IsDeletable(old)) continue;
-            var file = ResolveUnder(target, old); EnsureNoLinks(target, file); if (File.Exists(file)) File.Delete(file);
+            var file = ResolveUnder(target, old); EnsureNoLinks(target, file);
+            if (IsDisabledMod(old) || (IsModJar(old) && File.Exists(file + ".disabled"))) continue;
+            if (File.Exists(file)) File.Delete(file);
         }
         if (ExternalLauncherDiscovery.MmcFamily.Contains(installation.Launcher)) await WriteMmcPackAsync(installation.Launcher, installation.InstancePath, manifest, ct).ConfigureAwait(false);
         var updated = installation with { ModpackVersion = manifest.Version, ManagedFiles = wanted.ToArray(), WriteOnceFiles = writeOnce.ToArray() };
         await SaveInstallationAsync(updated, ct).ConfigureAwait(false);
+
+        static bool IsModJar(string relative) => relative.Replace('\\', '/').StartsWith("mods/", StringComparison.OrdinalIgnoreCase)
+            && relative.EndsWith(".jar", StringComparison.OrdinalIgnoreCase);
+        static bool IsDisabledMod(string relative) => relative.Replace('\\', '/').StartsWith("mods/", StringComparison.OrdinalIgnoreCase)
+            && relative.EndsWith(".jar.disabled", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task LaunchMmcAsync(ManagedInstallation installation, CancellationToken ct = default)

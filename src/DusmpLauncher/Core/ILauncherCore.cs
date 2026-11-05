@@ -30,6 +30,7 @@ public interface ILauncherCore
     Task RetryAsync(CancellationToken ct = default);
 
     Task SetLanguageAsync(string tag, CancellationToken ct = default);
+    Task SetJvmPresetAsync(string preset, CancellationToken ct = default);
     Task SetCountryAsync(string code, CancellationToken ct = default);
     Task SetPlayModeAsync(string mode, CancellationToken ct = default);
     IReadOnlyList<ExternalLauncherInfo> GetExternalLaunchers();
@@ -94,6 +95,10 @@ public interface ILauncherCore
 
     Task SaveSettingsAsync(Configuration.GameSettings settings, CancellationToken ct = default);
 
+    Task<IReadOnlyList<InstalledMod>> GetInstalledModsAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<InstalledMod>> SetInstalledModEnabledAsync(string fileName, bool enabled, CancellationToken ct = default);
+    Task<IReadOnlyList<InstalledMod>> ImportModsAsync(IReadOnlyList<string> files, CancellationToken ct = default);
+
     /// <summary>Current game settings, for the settings screen.</summary>
     Configuration.GameSettings CurrentSettings { get; }
 
@@ -103,7 +108,7 @@ public interface ILauncherCore
     /// </summary>
     string? ValidateOfflineUsername(string username);
 
-    /// <summary>Reveals the instance folder in the desktop file manager.</summary>
+    /// <summary>Reveals the shared instances directory in the desktop file manager.</summary>
     void OpenInstanceFolder();
 
     /// <summary>

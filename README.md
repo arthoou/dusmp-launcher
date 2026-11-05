@@ -41,6 +41,11 @@ arquivos apontam para URLs públicas de verdade, com tamanho e SHA-256 de verdad
   Edge coloca).
 - **Java**: o launcher provisiona sozinho via CmlLib; não precisa Java no PATH.
 
+O bootstrap de Java é executado antes dos processadores Forge/NeoForge. Em uma
+instalação limpa, o launcher baixa o componente declarado pelo Minecraft, valida
+os arquivos e verifica a versão do executável antes de continuar. O runtime
+fica dentro da instância e é reutilizado nas próximas aberturas.
+
 ### Variáveis de ambiente
 
 | Variável | Para que serve |
@@ -51,6 +56,13 @@ arquivos apontam para URLs públicas de verdade, com tamanho e SHA-256 de verdad
 | `DUSMP_UI_DIR` | serve a UI de uma pasta em disco, para editar HTML/CSS sem rebuildar |
 | `DUSMP_DEVTOOLS=1` | liga o DevTools do WebView |
 | `DUSMP_MS_CLIENT_ID` | client id do app Azure para o login Microsoft |
+| `CURSEFORGE_API_KEY` | substitui a chave CurseForge embutida; valor em branco desativa as consultas |
+| `DUSMP_CURSEFORGE_API_KEY` | alternativa legada, usada quando `CURSEFORGE_API_KEY` não está definida |
+
+Os downloads consultam primeiro o Modrinth e depois o CurseForge, usando os hashes
+do manifesto. O CurseForge já vem com uma chave configurada. Se o arquivo não for
+encontrado, não permitir download por terceiros ou a API falhar, o launcher usa o
+espelho DUSMP e mantém a verificação SHA-256.
 
 Para mexer no visual sem recompilar:
 
@@ -64,7 +76,46 @@ DUSMP_UI_DIR="$PWD/src/DusmpLauncher/UI" DUSMP_API_MODE=fixtures ~/.dotnet/dotne
 bash build.sh all
 ```
 
-Isso publica executáveis autocontidos para Linux e Windows em `dist/{linux,win}/{launcher,updater}`. O updater continua sendo iniciado em segundo plano pelo serviço systemd do usuário ou pela tarefa do Agendador do Windows; a janela de progresso, bandeja e troca verificada do binário do launcher ainda não estão incluídas.
+Isso gera executáveis autocontidos para Linux e Windows em `dist/{linux,win}/{launcher,updater}`. Para compilar, assinar e disponibilizar uma versão completa no site, use o fluxo de [publicação de releases](docs/launcher-releases.md):
+
+```bash
+node packaging/release/release.cjs publish --version 1.3.0
+```
+
+O site e o launcher consultam o mesmo manifesto assinado. O executável distribuído
+verifica atualizações na tela inicial, baixa e valida a nova versão e reinicia
+automaticamente, sem opção de pular. Um helper separado troca o arquivo depois
+da saída do processo e recupera a versão anterior se a nova interface não iniciar.
+O site oferece `.exe` portátil para Windows e pacote `.tar.gz` com instalador
+por usuário para Linux. A publicação do comando acima é no diretório local do
+site; a configuração do domínio e do processo de hospedagem permanece necessária.
+
+No Windows, para compilar e criar o instalador autocontido, execute no PowerShell:
+
+```powershell
+& .\packaging\windows\build.ps1
+```
+
+O resultado é `dist\win\DUSMP-Launcher-Setup.exe`. O instalador instala no perfil
+do usuário, cria atalhos no Menu Iniciar e na Área de Trabalho, registra o updater
+no Agendador de Tarefas e abre o launcher.
+
+No Windows, o launcher e o updater usam o subsistema gráfico para não abrir um
+terminal. A UI embutida é interceptada em `http://localhost/`, seguindo a
+integração WebView2 do Photino; no Linux continua em `app://launcher/`.
+Esse endereço é resolvido em memória, sem servidor HTTP local.
+
+Na configuração inicial, depois do idioma, o jogador precisa escolher o tipo de
+dispositivo: **low 8gb** (sistema com 8 GB de RAM, G1 e 4 GB de heap máximo),
+**low 16gb** (sistema com 16 GB de RAM, G1 e 6 GB de heap máximo) ou
+**Standard 16gb+** (sistema com pelo menos 16 GB de RAM, Generational ZGC e 10 GB de
+heap máximo). Os nomes indicam a RAM total do sistema; a alocação para o Minecraft
+é menor. A escolha também pode ser alterada em Settings. O
+controle de RAM continua editável e a escolha não redefine esse valor a cada
+abertura. Instalações existentes conservam seus argumentos até uma escolha
+explícita; a atualização solicita essa escolha uma vez, sem repetir o login.
+O botão de pasta abre `DusmpLauncher/instances`, com as pastas das
+edições dentro dele.
 
 ## Como está organizado
 
@@ -229,9 +280,9 @@ Publique o updater como executável autocontido para cada sistema. No Linux,
 serviço systemd do usuário. No Windows, registre a tarefa de login com
 `packaging/windows/install-updater-task.ps1 -UpdaterExe <caminho>`. Ambos
 iniciam o processo em segundo plano no login do usuário. Este build ainda não
-inclui ícone de bandeja, janela gráfica de progresso nem substituição automática
-verificada do binário do launcher; o launcher abre o URL HTTPS de atualização
-configurado na API.
+inclui ícone de bandeja nem janela gráfica própria de progresso. Esse processo
+mantém os modpacks; a atualização do executável é responsabilidade do próprio
+launcher e de seu helper de troca, conforme o fluxo de releases acima.
 
 ## O contrato da API
 
@@ -242,6 +293,7 @@ rotas ficam em `Network/ApiEndpoints.cs`. Base: `https://api.dusmp.online`.
 |---|---|
 | `GET /health` | 200 para o teste de vida |
 | `GET /launcher/version` | versão atual, versão mínima, URL de download, se é obrigatória |
+| `GET /launcher/releases/stable.json` | manifesto assinado da distribuição oficial por plataforma |
 | `GET /modpack/latest` | versão mais nova do modpack + URL do manifest |
 | `GET /modpack/manifest?version=` | o manifest da versão (ou da mais nova) |
 | `GET /mods/optional?version=` | lista de mods opcionais |

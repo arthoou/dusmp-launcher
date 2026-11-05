@@ -20,6 +20,10 @@ public enum LauncherStage
     Finishing = 11,
     Ready = 12,
     Failed = 13,
+    LauncherUpToDate = 14,
+    DownloadingLauncher = 15,
+    VerifyingLauncher = 16,
+    InstallingLauncher = 17,
 }
 
 /// <summary>

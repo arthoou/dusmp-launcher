@@ -159,6 +159,43 @@ const activeScreen = () => screens.find(s => s.classList.contains('is-active'))?
 
 (async () => {
   const settle = () => new Promise(resolve => setImmediate(resolve));
+  assert(!elements.has('btn-launcher-update'), 'Automatic launcher updates must not present a manual Update choice');
+  assert(!elements.has('btn-continue-installed'), 'Automatic launcher updates must not present a skip choice');
+  emit('screen', { screen: 'main', launcherUpdatePending: true, fatalErrorKey: 'error.launcher.updateRequired', gameState: 'idle' });
+  assert.equal(activeScreen(), 'error', 'A pending launcher update must prevent the main interface from opening');
+  emit('screen', { screen: 'main', launcherUpdatePending: true, gameState: 'idle' });
+  assert.equal(activeScreen(), 'loading', 'An automatic update restart remains on the loading screen');
+  assert.equal(table['onboarding.device.low8gb.name'], 'low 8gb', 'The 8 GB system tier must be available');
+  assert.equal(table['onboarding.device.default.name'], 'low 16gb', 'The 16 GB low tier must use its final display name');
+  assert.equal(table['onboarding.device.smooth.name'], 'Standard 16gb+', 'The standard tier must use its final display name');
+
+  let deviceHostScreen = 'onboarding-device', deviceSettings = null;
+  respond = (command, payload) => {
+    if (command === 'goToScreen') deviceHostScreen = payload.screen;
+    if (command === 'selectJvmPreset') {
+      deviceSettings = { jvmPreset: payload.preset, minRamMb: payload.preset === 'smooth' ? 2048 : 1024,
+        maxRamMb: { low8gb: 4096, default: 6144, smooth: 10240 }[payload.preset], extraJvmArgs: '' };
+      deviceHostScreen = 'onboarding-play-mode';
+      return deviceSettings;
+    }
+    if (command === 'getState') return { screen: deviceHostScreen, firstLaunch: true, jvmPreset: deviceSettings?.jvmPreset, gameState: 'idle' };
+    return {};
+  };
+  for (const preset of ['low8gb', 'default', 'smooth']) {
+    emit('screen', { screen: 'onboarding-device', firstLaunch: true, gameState: 'idle' });
+    assert.equal(activeScreen(), 'onboarding-device', 'A device choice must be offered during first-run setup');
+    elements.get('device-' + preset).fire('click');
+    await settle();
+    assert(sent.some(x => x.command === 'selectJvmPreset' && x.payload.preset === preset), `${preset} choice must reach the backend`);
+    assert.equal(activeScreen(), 'onboarding-play-mode', 'Device selection must follow the backend to the play mode step');
+    elements.get('playmode-back').fire('click');
+    await settle();
+    assert.equal(activeScreen(), 'onboarding-device', 'Play mode Back must return to the device choice');
+    for (const other of ['low8gb', 'default', 'smooth']) {
+      assert.equal(elements.get('device-' + other).attributes['aria-pressed'], String(other === preset), 'Only the saved preset must be selected');
+      assert.equal(elements.get('device-' + other).disabled, false, 'All preset choices must be enabled after saving');
+    }
+  }
 
   emit('screen', { screen: 'onboarding-play-mode', firstLaunch: true, gameState: 'idle' });
   assert.equal(activeScreen(), 'onboarding-play-mode', 'The play mode step must be reachable before the account step');
@@ -360,11 +397,49 @@ const activeScreen = () => screens.find(s => s.classList.contains('is-active'))?
   assert(sent.some(x => x.command === 'openSkinWindow'), 'With one account the chip must open the skin window');
   assert(!sent.some(x => x.command === 'selectAccount'), 'The chip must not switch accounts on its own');
 
-  // The folder button beside the gear opens the launcher folder.
+  // The folder button beside the gear requests the shared instances directory.
   sent.length = 0;
   elements.get('btn-folder').fire('click');
   await settle();
-  assert(sent.some(x => x.command === 'openInstanceFolder'), 'The folder button must open the launcher folder');
+  assert(sent.some(x => x.command === 'openInstanceFolder'), 'The folder button must request the instances folder');
 
-  console.log('PASS: bootstrap, backend error display, Play/Stop handling, expandable news, onboarding order, offline sign-in, account drawer, folder button and pack choice.');
+  let savedGameSettings = null;
+  deviceSettings = { jvmPreset: 'smooth', minRamMb: 2048, maxRamMb: 10240, extraJvmArgs: '', downloadConcurrency: 6 };
+  respond = (command, payload) => {
+    if (command === 'getSettings') return deviceSettings;
+    if (command === 'selectJvmPreset') {
+      deviceSettings = { ...deviceSettings, jvmPreset: payload.preset, minRamMb: 1024,
+        maxRamMb: { low8gb: 4096, default: 6144 }[payload.preset] };
+      return deviceSettings;
+    }
+    if (command === 'getState') return { screen: 'main', firstLaunch: false, jvmPreset: deviceSettings.jvmPreset, gameState: 'idle' };
+    if (command === 'saveSettings') { savedGameSettings = payload; return payload; }
+    return {};
+  };
+  emit('screen', { screen: 'main', firstLaunch: false, jvmPreset: 'smooth', gameState: 'idle' });
+  elements.get('btn-settings').fire('click');
+  await settle();
+  assert.equal(elements.get('set-ram').value, 10240, 'Smooth heap must appear in the editable RAM control');
+  elements.get('settings-device-btn').fire('click');
+  await settle();
+  assert.equal(activeScreen(), 'onboarding-device', 'Settings must allow changing the device preset');
+  elements.get('device-default').fire('click');
+  await settle();
+  assert.equal(activeScreen(), 'settings', 'Changing a preset in Settings must return to Settings');
+  assert.equal(elements.get('set-ram').value, 6144, 'Default must start at 6 GB');
+  elements.get('settings-device-btn').fire('click');
+  await settle();
+  elements.get('device-low8gb').fire('click');
+  await settle();
+  assert.equal(activeScreen(), 'settings', 'The new low tier must also return to Settings');
+  assert.equal(elements.get('set-ram').value, 4096, 'The 8 GB system tier must start with 4 GB allocated');
+  assert.equal(elements.get('settings-device-value').textContent, 'low 8gb', 'Settings must show the selected new tier');
+  elements.get('set-ram').value = 8192;
+  elements.get('btn-save-settings').fire('click');
+  await settle();
+  assert.equal(savedGameSettings.jvmPreset, 'low8gb', 'Saving a RAM change must retain the selected preset');
+  assert.equal(savedGameSettings.maxRamMb, 8192, 'The player RAM override must be saved');
+  assert.equal(savedGameSettings.minRamMb, 1024, 'Saving must retain the preset initial heap');
+
+  console.log('PASS: bootstrap, onboarding device choice, preset changes, adjustable RAM, backend errors, Play/Stop, account drawer, folder button and pack choice.');
 })().catch(error => { console.error(error); process.exit(1); });

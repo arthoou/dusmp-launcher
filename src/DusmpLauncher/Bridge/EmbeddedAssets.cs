@@ -1,17 +1,19 @@
 using System.Reflection;
+using System.Text;
 
 namespace DusmpLauncher.Bridge;
 
 /// <summary>
-/// Serves the UI out of the assembly over a custom scheme. Going through
-/// All assets share app://launcher/ so relative URLs use the same origin
-/// in both WebKitGTK and WebView2.
+/// Serves the UI out of the assembly. WebKit uses app://launcher/; Windows
+/// intercepts http://localhost/ because Photino's WebView2 integration cannot
+/// navigate the initial document to a custom scheme.
 /// </summary>
 public sealed class EmbeddedAssets
 {
     /// <summary>Scheme the UI is served under. Must match the URLs in index.html.</summary>
-    public const string Scheme = "app";
-    public const string Host = "launcher";
+    public static string Scheme { get; } = OperatingSystem.IsWindows() ? "http" : "app";
+    public static string Host { get; } = OperatingSystem.IsWindows() ? "localhost" : "launcher";
+    private const string SourceBaseUri = "app://launcher/";
 
     private const string ResourcePrefix = "DusmpLauncher.UI.";
 
@@ -64,15 +66,32 @@ public sealed class EmbeddedAssets
         {
             var onDisk = Path.Combine(_overrideDirectory, path.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(onDisk))
-                return File.OpenRead(onDisk);
+                return PrepareAsset(File.OpenRead(onDisk), path);
         }
 
         if (_resourceByPath.TryGetValue(path, out var resourceName))
-            return _assembly.GetManifestResourceStream(resourceName);
+            return PrepareAsset(_assembly.GetManifestResourceStream(resourceName), path);
 
         Console.Error.WriteLine($"UI asset not found: {path}");
         return null;
     }
+
+    private static Stream? PrepareAsset(Stream? source, string path)
+    {
+        if (source is null || !OperatingSystem.IsWindows()
+            || Path.GetExtension(path).ToLowerInvariant() is not (".html" or ".css" or ".js" or ".mjs"))
+            return source;
+
+        // Keep every page, stylesheet, script and dynamically created image on
+        // the same intercepted origin. No HTTP listener or external server is used.
+        using var reader = new StreamReader(source, Encoding.UTF8);
+        var text = UsePlatformOrigin(reader.ReadToEnd());
+        return new MemoryStream(Encoding.UTF8.GetBytes(text));
+    }
+
+    /// <summary>Also maps embedded asset URLs supplied by backend messages.</summary>
+    public static string UsePlatformOrigin(string content) =>
+        content.Replace(SourceBaseUri, $"{Scheme}://{Host}/", StringComparison.Ordinal);
 
     /// <summary>Strips the scheme, host and query to leave a resource path.</summary>
     private static string NormalizePath(string url)

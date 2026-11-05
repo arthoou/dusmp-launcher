@@ -21,10 +21,28 @@ string ReadAsset(string url, string mime)
 }
 
 var html = ReadAsset(EmbeddedAssets.EntryPoint.AbsoluteUri, "text/html");
+string AssetUrl(string path) => new Uri(EmbeddedAssets.EntryPoint, path).AbsoluteUri;
 Require(html.Contains("screen-loading is-active"), "Loading screen is hidden before JavaScript starts.");
 Require(!html.Contains("type=\"module\""), "Bootstrap should not depend on module CORS over a custom scheme.");
-Require(ReadAsset("app://launcher/", "text/html") == html, "Root and entry point resolve differently.");
-foreach (Match match in Regex.Matches(html, "(?:src|href)=\"(app://[^\"]+)\""))
+Require(ReadAsset(AssetUrl("/"), "text/html") == html, "Root and entry point resolve differently.");
+Require(EmbeddedAssets.Scheme == (OperatingSystem.IsWindows() ? "http" : "app"), "The entry point uses an unsupported platform scheme.");
+var flagUrl = EmbeddedAssets.UsePlatformOrigin("app://launcher/assets/flags/us.svg");
+Require(flagUrl == AssetUrl("assets/flags/us.svg"), "Backend image URLs use a different origin from the document.");
+ReadAsset(flagUrl, "image/svg+xml");
+if (OperatingSystem.IsWindows())
+{
+    Require(html.Contains("http://localhost/js/app.js"), "The Windows entry point lost its intercepted asset origin.");
+    foreach (var path in new[] { "index.html", "profile.html", "css/app.css", "js/app.js", "js/profile.js" })
+    {
+        using var stream = assets.Resolve(assets, EmbeddedAssets.Scheme, AssetUrl(path), out _);
+        using var reader = new StreamReader(stream!);
+        var content = reader.ReadToEnd();
+        Require(!content.Contains("app://launcher/"), $"Windows asset still uses the unsupported custom scheme: {path}");
+    }
+}
+var assetLinks = Regex.Matches(html, "(?:src|href)=\"((?:app|http)://[^\"]+)\"");
+Require(assetLinks.Count > 0, "No asset links were checked.");
+foreach (Match match in assetLinks)
 {
     var url = match.Groups[1].Value;
     Require(new Uri(url).Host == EmbeddedAssets.Host, $"Asset is on a different origin: {url}");
@@ -33,8 +51,8 @@ foreach (Match match in Regex.Matches(html, "(?:src|href)=\"(app://[^\"]+)\""))
 }
 ReadAsset(new Uri(EmbeddedAssets.EntryPoint, "css/app.css").AbsoluteUri, "text/css");
 ReadAsset(new Uri(EmbeddedAssets.EntryPoint, "js/app.js").AbsoluteUri, "text/javascript");
-ReadAsset("app://launcher/index.html?cache=1", "text/html");
-foreach (var invalid in new[] { "file:///etc/passwd", "app://foreign/index.html", "app://launcher/%2e%2e%2fsecret", "app://launcher/%5csecret" })
+ReadAsset(AssetUrl("index.html?cache=1"), "text/html");
+foreach (var invalid in new[] { "file:///etc/passwd", $"{EmbeddedAssets.Scheme}://foreign/index.html", AssetUrl("%2e%2e%2fsecret"), AssetUrl("%5csecret") })
 {
     using var stream = assets.Resolve(assets, EmbeddedAssets.Scheme, invalid, out _);
     Require(stream is null, $"Unexpected asset for {invalid}");
@@ -50,7 +68,7 @@ foreach (var invalid in new[] { "file:///etc/passwd", "app://foreign/index.html"
 var skinPage = ReadAsset(new Uri(EmbeddedAssets.EntryPoint, "profile.html").AbsoluteUri, "text/html");
 Require(skinPage.Contains("player-model", StringComparison.Ordinal), "The skin window page lost its model container.");
 Require(skinPage.Contains("js/profile.js", StringComparison.Ordinal), "The skin window page does not load its script.");
-foreach (Match match in Regex.Matches(skinPage, "(?:src|href)=\"(app://[^\"]+)\""))
+foreach (Match match in Regex.Matches(skinPage, "(?:src|href)=\"((?:app|http)://[^\"]+)\""))
 {
     using var stream = assets.Resolve(assets, EmbeddedAssets.Scheme, match.Groups[1].Value, out _);
     Require(stream is not null && stream.Length > 0, $"Unresolved skin window asset: {match.Groups[1].Value}");

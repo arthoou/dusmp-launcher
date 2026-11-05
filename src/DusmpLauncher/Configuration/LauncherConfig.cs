@@ -58,6 +58,9 @@ public sealed class LauncherConfig
 
 public sealed class GameSettings
 {
+    /// <summary>Selected device preset. Null preserves pre-preset custom JVM settings.</summary>
+    [JsonPropertyName("jvmPreset")] public string? JvmPreset { get; set; }
+
     /// <summary>Max heap in MB. 0 means "let the launcher decide from installed RAM".</summary>
     [JsonPropertyName("maxRamMb")] public int MaxRamMb { get; set; }
 
@@ -77,7 +80,6 @@ public sealed class GameSettings
     [JsonPropertyName("closeOnLaunch")] public bool CloseOnLaunch { get; set; }
 
     /// <summary>Join the pack's server straight from the Play button.</summary>
-    [JsonPropertyName("autoJoinServer")] public bool AutoJoinServer { get; set; } = true;
 
     /// <summary>Parallel download slots. Clamped to 1..16 on load.</summary>
     [JsonPropertyName("downloadConcurrency")] public int DownloadConcurrency { get; set; } = 6;

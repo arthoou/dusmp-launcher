@@ -41,11 +41,15 @@ public interface IGameLauncher
     /// <summary>Ends the running game, including its child processes. No-op when idle.</summary>
     Task StopAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// Starts the game. It opens on its own menu: the launcher does not connect
+    /// to anything, and the player joins DUSMP from Minecraft's own server list
+    /// like any other server.
+    /// </summary>
     Task<Process> LaunchAsync(
         string versionId,
         GameSession session,
         GameSettings settings,
-        ManifestServer? server,
         CancellationToken ct = default);
 }
 

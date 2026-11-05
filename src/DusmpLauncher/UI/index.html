@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="app://launcher/css/loader.css">
   <link rel="stylesheet" href="app://launcher/css/app.css">
   <link rel="stylesheet" href="app://launcher/css/home.css">
+  <link rel="stylesheet" href="app://launcher/css/device.css">
+  <link rel="stylesheet" href="app://launcher/css/installed-mods.css">
   <title>DUSMP</title>
 </head>
 <body>
@@ -71,6 +73,38 @@
           <button type="button" class="btn btn-ghost nav-back" id="language-back" data-i18n="common.back" hidden></button>
           <span class="panel-foot-spacer"></span>
 
+        </footer>
+      </div>
+    </section>
+
+    <section class="screen screen-device" id="screen-onboarding-device" data-screen="onboarding-device">
+      <div class="panel device-panel">
+        <header class="panel-head">
+          <h1 class="panel-title" id="device-title" data-i18n="onboarding.device.title"></h1>
+          <p class="panel-sub" data-i18n="onboarding.device.subtitle"></p>
+        </header>
+        <div class="device-choices" role="group" aria-labelledby="device-title">
+          <button type="button" class="device-choice" id="device-low8gb" aria-pressed="false">
+            <span class="device-choice-tier" data-i18n="onboarding.device.low8gb.tier"></span>
+            <span class="device-choice-title" data-i18n="onboarding.device.low8gb.name"></span>
+            <span class="device-choice-memory" data-i18n="onboarding.device.low8gb.ram"></span>
+            <span class="device-choice-description" data-i18n="onboarding.device.low8gb.description"></span>
+          </button>
+          <button type="button" class="device-choice" id="device-default" aria-pressed="false">
+            <span class="device-choice-tier" data-i18n="onboarding.device.default.tier"></span>
+            <span class="device-choice-title" data-i18n="onboarding.device.default.name"></span>
+            <span class="device-choice-memory" data-i18n="onboarding.device.default.ram"></span>
+            <span class="device-choice-description" data-i18n="onboarding.device.default.description"></span>
+          </button>
+          <button type="button" class="device-choice" id="device-smooth" aria-pressed="false">
+            <span class="device-choice-tier" data-i18n="onboarding.device.smooth.tier"></span>
+            <span class="device-choice-title" data-i18n="onboarding.device.smooth.name"></span>
+            <span class="device-choice-memory" data-i18n="onboarding.device.smooth.ram"></span>
+            <span class="device-choice-description" data-i18n="onboarding.device.smooth.description"></span>
+          </button>
+        </div>
+        <footer class="panel-foot">
+          <button type="button" class="btn btn-ghost" id="device-back" data-i18n="common.back"></button>
         </footer>
       </div>
     </section>
@@ -301,6 +335,8 @@
               </div>
             </div>
 
+            <button type="button" class="btn btn-ghost btn-small home-mods-button" id="btn-installed-mods" data-i18n="installedMods.title"></button>
+
             <button type="button" class="iconbtn" id="btn-folder" data-i18n-aria-label="main.openFolder">
               <!-- folder-fill from Bootstrap Icons (MIT) — see assets/ATTRIBUTION.md -->
               <svg class="gear folder" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -325,11 +361,6 @@
         </div>
 
         <div class="home-banners">
-          <div class="banner banner-update" id="launcher-update" hidden>
-            <p class="banner-text" id="launcher-update-text"></p>
-            <button type="button" class="btn btn-small btn-primary" id="btn-launcher-update"
-                    data-i18n="main.launcherUpdate.action"></button>
-          </div>
           <div class="banner banner-maintenance" id="maintenance-banner" hidden>
             <p class="banner-text" id="maintenance-text"></p>
           </div>
@@ -369,6 +400,39 @@
             <div class="installation-path"><dt data-i18n="main.status.path"></dt><dd id="main-installation-path" dir="ltr"></dd></div>
           </dl>
         </div>
+      </div>
+    </section>
+
+    <section class="screen screen-installed-mods" id="screen-installed-mods" data-screen="installed-mods">
+      <div class="panel installed-mods-panel">
+        <header class="installed-mods-header">
+          <div>
+            <h1 class="panel-title" data-i18n="installedMods.title"></h1>
+            <p class="panel-sub" data-i18n="installedMods.subtitle"></p>
+          </div>
+          <div class="installed-mods-header-actions">
+            <button type="button" class="btn btn-ghost btn-small" id="installed-mods-back" data-i18n="common.back"></button>
+            <button type="button" class="btn btn-primary btn-small" id="installed-mods-upload" data-i18n="installedMods.upload"></button>
+          </div>
+        </header>
+        <div class="installed-mods-toolbar">
+          <label class="sr-only" for="installed-mods-search" data-i18n="installedMods.search"></label>
+          <input type="search" class="search-input" id="installed-mods-search" autocomplete="off" spellcheck="false" data-i18n-placeholder="installedMods.search">
+          <span class="installed-mods-count" id="installed-mods-count"></span>
+        </div>
+        <p class="installed-mods-status" id="installed-mods-status" role="status" aria-live="polite" hidden></p>
+        <div class="installed-mods-table-scroll">
+          <table class="installed-mods-table">
+            <thead><tr>
+              <th scope="col" data-i18n="installedMods.project"></th>
+              <th scope="col" data-i18n="installedMods.version"></th>
+              <th scope="col" class="installed-mods-actions" data-i18n="installedMods.actions"></th>
+            </tr></thead>
+            <tbody id="installed-mods-list"></tbody>
+          </table>
+          <p class="installed-mods-empty" id="installed-mods-empty" data-i18n="installedMods.empty" hidden></p>
+        </div>
+        <p class="field-hint installed-mods-hint" data-i18n="installedMods.hint"></p>
       </div>
     </section>
 
@@ -413,6 +477,11 @@
 
           <section class="settings-group">
             <h2 class="settings-group-title" data-i18n="settings.group.game"></h2>
+            <div class="setting-row">
+              <span class="setting-label" data-i18n="settings.devicePreset"></span>
+              <span class="setting-value" id="settings-device-value"></span>
+              <button type="button" class="btn btn-ghost btn-small" id="settings-device-btn" data-i18n="settings.change"></button>
+            </div>
             <div class="field field-inline">
               <label class="field-label" for="set-ram" data-i18n="settings.ram"></label>
               <input type="range" id="set-ram" min="1024" max="16384" step="512" value="4096">
@@ -449,10 +518,6 @@
             <div class="check-row">
               <input type="checkbox" id="set-close-on-launch">
               <label for="set-close-on-launch" data-i18n="settings.closeOnLaunch"></label>
-            </div>
-            <div class="check-row">
-              <input type="checkbox" id="set-auto-join">
-              <label for="set-auto-join" data-i18n="settings.autoJoin"></label>
             </div>
           </section>
 
